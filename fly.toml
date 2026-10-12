@@ -1,0 +1,28 @@
+# Coordinator on Fly.io (devnet). Secrets (never in this file):
+#   fly secrets set DATABASE_URL=postgres://...  CRANK_KEYPAIR=<base58 keypair with devnet SOL>
+app = "replicata-coordinator"
+primary_region = "mad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  CLUSTER = "devnet"
+  RPC_URL = "https://api.devnet.solana.com"
+  FACILITATOR_URL = "https://x402.org/facilitator"
+  PUBLIC_URL = "https://replicata-coordinator.fly.dev"
+  PUBLISH_FEE = "100000"
+  RUST_LOG = "info"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = "off"
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "20s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    timeout = "5s"

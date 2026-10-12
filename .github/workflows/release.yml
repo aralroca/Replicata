@@ -1,0 +1,43 @@
+name: Release worker
+
+# Push a tag like `v0.1.0` to publish `replicata-<target>.tar.gz` (the names install.sh expects).
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: linux-x86_64 }
+          - { os: macos-latest, target: darwin-arm64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release -p replicata-worker
+      - name: Package
+        run: |
+          mkdir -p dist
+          tar -czf "dist/replicata-${{ matrix.target }}.tar.gz" -C target/release replicata
+      - uses: actions/upload-artifact@v4
+        with:
+          name: replicata-${{ matrix.target }}
+          path: dist/*.tar.gz
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" dist/*.tar.gz --repo "${{ github.repository }}" --generate-notes
