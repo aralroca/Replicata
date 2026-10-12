@@ -9,6 +9,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash # = bash -eo pipefail, so `| tee` does not hide failures
+
 env:
   CARGO_TERM_COLOR: always
   AGAVE_VERSION: v4.1.2
@@ -42,10 +46,25 @@ jobs:
           diff -u idl/replicata.json target/idl/replicata.json
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
-      - name: Tests (incl. Docker sandbox and cross-arch determinism of the examples)
+      - name: Test core + client
+        run: cargo test -p replicata-core -p replicata-client 2>&1 | tee -a test-output.txt
+      - name: Test program (LiteSVM)
+        run: cargo test -p replicata -p replicata-program-tests 2>&1 | tee -a test-output.txt
+      - name: Test coordinator (Postgres + mocked facilitator)
         env:
           TEST_DATABASE_URL: postgres://replicata:replicata@127.0.0.1:54329/replicata
-        run: cargo test --workspace
+        run: cargo test -p replicata-coordinator 2>&1 | tee -a test-output.txt
+      - name: Test worker (unit + Docker sandbox)
+        run: cargo test -p replicata-worker --lib --test sandbox 2>&1 | tee -a test-output.txt
+      - name: Test demo determinism on x86_64 (hashes recorded on arm64)
+        run: cargo test -p replicata-worker --test examples 2>&1 | tee -a test-output.txt
+      - name: Build e2e harness
+        run: cargo build -p replicata-e2e --tests
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-test-output
+          path: test-output.txt
 
   e2e:
     name: End-to-end (localnet + x402 facilitator + Docker)
