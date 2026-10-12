@@ -26,9 +26,11 @@ reqwest-middleware = { version = "0.5.2", features = ["json"] }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+solana-account = "3.4.0"
 solana-client = "3.1.14"
 solana-commitment-config = "3.1.1"
 solana-keypair = "3.1.2"
+solana-message = "3.1.0"
 solana-signer = "3.0.1"
 solana-transaction = "3.1.0"
 tempfile.workspace = true

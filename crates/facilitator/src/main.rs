@@ -13,7 +13,13 @@ use std::sync::Arc;
 use anyhow::Context;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use x402_chain_solana::chain::config::SolanaChainConfig;
-use x402_chain_solana::chain::{SolanaChainProvider, SolanaChainReference};
+use solana_account::Account;
+use solana_client::rpc_config::RpcSimulateTransactionConfig;
+use solana_commitment_config::CommitmentConfig;
+use solana_signature::Signature;
+use solana_transaction::versioned::VersionedTransaction;
+use x402_chain_solana::chain::{Address, SolanaChainProvider, SolanaChainProviderError, SolanaChainProviderLike, SolanaChainReference};
+use replicata_client::Pubkey;
 use x402_chain_solana::V2SolanaExact;
 use x402_facilitator_local::{handlers, FacilitatorLocal};
 use x402_types::chain::{ChainId, ChainIdPattern, ChainProviderOps, ChainRegistry, FromConfig};
@@ -21,8 +27,60 @@ use x402_types::scheme::{
     SchemeBlueprints, SchemeConfig, SchemeRegistry, X402SchemeFacilitator, X402SchemeFacilitatorBuilder,
 };
 
+/// `SolanaChainProvider` reads accounts at `finalized` (~13 s behind on a local validator), so
+/// a payer funded seconds earlier looks like it has no token account. Reads go through a
+/// `confirmed` client instead; signing and sending are delegated unchanged.
+struct ConfirmedProvider {
+    inner: SolanaChainProvider,
+    rpc: RpcClient,
+}
+
+impl SolanaChainProviderLike for ConfirmedProvider {
+    async fn simulate_transaction_with_config(&self, tx: &VersionedTransaction, cfg: RpcSimulateTransactionConfig) -> Result<(), SolanaChainProviderError> {
+        self.inner.simulate_transaction_with_config(tx, cfg).await
+    }
+
+    async fn get_multiple_accounts(&self, pubkeys: &[Pubkey]) -> Result<Vec<Option<Account>>, SolanaChainProviderError> {
+        Ok(self.rpc.get_multiple_accounts(pubkeys).await?)
+    }
+
+    fn max_compute_unit_limit(&self) -> u32 {
+        self.inner.max_compute_unit_limit()
+    }
+
+    fn max_compute_unit_price(&self) -> u64 {
+        self.inner.max_compute_unit_price()
+    }
+
+    fn pubkey(&self) -> Pubkey {
+        self.inner.pubkey()
+    }
+
+    fn fee_payer(&self) -> Address {
+        self.inner.fee_payer()
+    }
+
+    fn sign(&self, tx: VersionedTransaction) -> Result<VersionedTransaction, SolanaChainProviderError> {
+        self.inner.sign(tx)
+    }
+
+    async fn send_and_confirm(&self, tx: &VersionedTransaction, commitment: CommitmentConfig) -> Result<Signature, SolanaChainProviderError> {
+        self.inner.send_and_confirm(tx, commitment).await
+    }
+}
+
+impl ChainProviderOps for ConfirmedProvider {
+    fn signer_addresses(&self) -> Vec<String> {
+        self.inner.signer_addresses()
+    }
+
+    fn chain_id(&self) -> ChainId {
+        self.inner.chain_id()
+    }
+}
+
 /// Blueprints are built from `&P`; this wrapper hands the scheme an owned `Arc` provider.
-struct Provider(Arc<SolanaChainProvider>);
+struct Provider(Arc<ConfirmedProvider>);
 
 impl ChainProviderOps for Provider {
     fn signer_addresses(&self) -> Vec<String> {
@@ -40,7 +98,7 @@ impl X402SchemeFacilitatorBuilder<&Provider> for V2SolanaExact {
         provider: &Provider,
         config: Option<serde_json::Value>,
     ) -> Result<Box<dyn X402SchemeFacilitator>, Box<dyn std::error::Error>> {
-        X402SchemeFacilitatorBuilder::<Arc<SolanaChainProvider>>::build(self, provider.0.clone(), config)
+        X402SchemeFacilitatorBuilder::<Arc<ConfirmedProvider>>::build(self, provider.0.clone(), config)
     }
 }
 
@@ -61,7 +119,8 @@ async fn scheme_registry(rpc_url: &str, fee_payer: &str) -> anyhow::Result<(Sche
     let reference = chain_reference(rpc_url).await?;
     let inner: x402_chain_solana::chain::config::SolanaChainConfigInner = serde_json::from_value(serde_json::json!({ "signer": fee_payer_base58(fee_payer)?, "rpc": rpc_url }))?;
     let config = SolanaChainConfig { chain_reference: reference, inner };
-    let provider = SolanaChainProvider::from_config(&config).await.map_err(|e| anyhow::anyhow!("{e}"))?;
+    let inner = SolanaChainProvider::from_config(&config).await.map_err(|e| anyhow::anyhow!("{e}"))?;
+    let provider = ConfirmedProvider { inner, rpc: RpcClient::new_with_commitment(rpc_url.to_string(), CommitmentConfig::confirmed()) };
     let chain_id = config.chain_id();
     let schemes = vec![SchemeConfig {
         enabled: true,

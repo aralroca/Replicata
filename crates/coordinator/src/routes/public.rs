@@ -101,9 +101,23 @@ pub async fn list_experiments(State(state): State<AppState>, Query(q): Query<Lis
     Ok(Json(views.into_iter().filter(|v| matches(v, &q)).take(limit).collect()))
 }
 
+/// The indexer polls; an experiment created a moment ago is read straight from the chain.
+pub async fn snapshot_with(state: &AppState, id: &Pubkey) -> Snapshot {
+    let mut snapshot = state.snapshot.read().await.clone();
+    if snapshot.experiments.contains_key(id) {
+        return snapshot;
+    }
+    let fresh = state.rpc.get_account(id).await.ok().and_then(|a| replicata_client::decode(&a.data));
+    if let Some(experiment) = fresh {
+        snapshot.experiments.insert(*id, experiment);
+        state.refresh.notify_one();
+    }
+    snapshot
+}
+
 pub async fn get_experiment(State(state): State<AppState>, Path(id): Path<String>) -> ApiResult<Json<ExperimentView>> {
     let id = parse_pubkey(&id)?;
-    let snapshot = state.snapshot.read().await.clone();
+    let snapshot = snapshot_with(&state, &id).await;
     let views = render(&state, &snapshot, vec![id]).await?;
 
     views.into_iter().next().map(Json).ok_or_else(|| ApiError::not_found("experiment"))

@@ -1,0 +1,29 @@
+[package]
+name = "replicata-e2e"
+version = "0.1.0"
+description = "End-to-end tests against the local stack (scripts/localnet.sh + Docker)"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+async-trait = "0.1"
+http = "1.5.0"
+replicata-client = { path = "../crates/client" }
+replicata-coordinator = { path = "../crates/coordinator" }
+replicata-core.workspace = true
+replicata-worker = { path = "../crates/worker" }
+reqwest = { version = "0.13.5", features = ["json"] }
+reqwest-middleware = { version = "0.5.2", features = ["json"] }
+serde_json.workspace = true
+solana-client = "3.1.14"
+solana-commitment-config = "3.1.1"
+solana-keypair = "3.1.2"
+solana-signer = "3.0.1"
+solana-transaction = "3.1.0"
+tempfile.workspace = true
+tokio = { version = "1.53.2", features = ["full"] }
+x402-chain-solana = { version = "2.0.2", features = ["client"] }
+x402-reqwest = "2.0.2"
+

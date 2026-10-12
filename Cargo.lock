@@ -4811,15 +4811,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "replicata-e2e"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "http 1.5.0",
+ "replicata-client",
+ "replicata-coordinator",
+ "replicata-core",
+ "replicata-worker",
+ "reqwest 0.13.5",
+ "reqwest-middleware 0.5.2",
+ "serde_json",
+ "solana-client",
+ "solana-commitment-config",
+ "solana-keypair",
+ "solana-signer",
+ "solana-transaction 3.1.0",
+ "tempfile",
+ "tokio",
+ "x402-chain-solana",
+ "x402-reqwest",
+]
+
+[[package]]
 name = "replicata-facilitator"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
  "bs58",
+ "replicata-client",
  "serde_json",
+ "solana-account 3.4.0",
  "solana-client",
+ "solana-commitment-config",
  "solana-keypair",
+ "solana-signature",
+ "solana-transaction 3.1.0",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -4869,9 +4899,11 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.9",
+ "solana-account 3.4.0",
  "solana-client",
  "solana-commitment-config",
  "solana-keypair",
+ "solana-message 3.1.0",
  "solana-signer",
  "solana-transaction 3.1.0",
  "tempfile",

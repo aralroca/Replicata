@@ -18,7 +18,7 @@ use x402_types::proto::SettleResponse;
 use crate::db;
 use crate::error::{ApiError, ApiResult};
 use crate::payments;
-use crate::routes::public::parse_pubkey;
+use crate::routes::public::{parse_pubkey, snapshot_with};
 use crate::snapshot::now;
 use crate::state::AppState;
 
@@ -38,7 +38,7 @@ pub fn experiment_id(path: &str) -> Option<&str> {
 
 async fn load_verified(state: &AppState, path: &str) -> ApiResult<Verified> {
     let id = parse_pubkey(experiment_id(path).unwrap_or_default())?;
-    let exp = state.snapshot.read().await.experiments.get(&id).cloned().ok_or_else(|| ApiError::not_found("experiment"))?;
+    let exp = snapshot_with(state, &id).await.experiments.get(&id).cloned().ok_or_else(|| ApiError::not_found("experiment"))?;
     if exp.status != ExperimentStatus::Replicated {
         return Err(ApiError::conflict("not_replicated", "the experiment has not been replicated yet"));
     }

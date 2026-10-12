@@ -6,6 +6,7 @@ members = [
     "crates/facilitator",
     "crates/coordinator",
     "crates/worker",
+    "e2e",
     "tests",
 
 ]

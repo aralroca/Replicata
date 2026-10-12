@@ -39,6 +39,8 @@ pub struct ExperimentView {
     pub claims_count: u8,
     pub spec: Option<JobSpec>,
     pub result_hash: Option<String>,
+    #[serde(default)]
+    pub royalties_paid: u64,
     pub claims: Vec<ClaimView>,
 }
 

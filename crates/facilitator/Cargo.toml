@@ -11,7 +11,12 @@ anyhow.workspace = true
 axum = "0.8.9"
 bs58 = "0.5.1"
 serde_json.workspace = true
+replicata-client = { path = "../client" }
+solana-account = "3.4.0"
 solana-client = "3.1.14"
+solana-commitment-config = "3.1.1"
+solana-signature = "3.5.2"
+solana-transaction = "3.1.0"
 solana-keypair = "3.1.2"
 tokio = { version = "1.53.2", features = ["full"] }
 tracing = "0.1.44"

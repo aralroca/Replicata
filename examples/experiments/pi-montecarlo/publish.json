@@ -1,0 +1,30 @@
+{
+  "spec": {
+    "version": 1,
+    "title": "Monte-Carlo estimate of π",
+    "description": "Estimate π from 1,000,000 seeded random points (Python stdlib Mersenne Twister, no BLAS).",
+    "image": "python",
+    "image_digest": "sha256:70729b46c69b4f1e97c4822c1af3df53a1476cf5ddc6c087c0c10bc3a5678c2f",
+    "cmd": [
+      "python3",
+      "-c",
+      "import json, os, random\nseed = int(os.environ[\"REPLICATA_SEED\"]); n = int(os.environ[\"SAMPLES\"])\nrng = random.Random(seed)\ninside = sum(1 for _ in range(n) if rng.random() ** 2 + rng.random() ** 2 <= 1.0)\njson.dump({\"samples\": n, \"inside\": inside, \"pi\": 4 * inside / n, \"seed\": seed}, open(\"/out/result.json\", \"w\"), sort_keys=True)\n"
+    ],
+    "env": {
+      "SAMPLES": "1000000"
+    },
+    "inputs": [],
+    "cpus": 1,
+    "mem_mb": 256,
+    "timeout_s": 120,
+    "seed": 42
+  },
+  "reward": 3000000,
+  "bond": 1000000,
+  "k": 3,
+  "max_claims": 3,
+  "commit_secs": 300,
+  "reveal_secs": 300,
+  "access_price": 10000,
+  "author_share_bps": 7000
+}

@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "title": "A non-reproducible experiment",
+  "description": "Reads the clock and OS randomness, so independent replications disagree: shows the Unresolved path.",
+  "image": "python",
+  "image_digest": "sha256:70729b46c69b4f1e97c4822c1af3df53a1476cf5ddc6c087c0c10bc3a5678c2f",
+  "cmd": [
+    "python3",
+    "-c",
+    "import os, time\n# Deliberately NOT reproducible: depends on the clock and on OS randomness.\nopen(\"/out/result.txt\", \"w\").write(f\"{time.time_ns()} {os.urandom(16).hex()}\\n\")\n"
+  ],
+  "env": {},
+  "inputs": [],
+  "cpus": 1,
+  "mem_mb": 256,
+  "timeout_s": 120,
+  "seed": 42
+}

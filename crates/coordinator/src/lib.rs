@@ -12,6 +12,7 @@ pub mod snapshot;
 pub mod state;
 pub mod views;
 
+use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -42,15 +43,25 @@ async fn ensure_treasury_ata(state: &AppState) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Spawns the indexer and the crank, then serves the API until the process stops.
-pub async fn serve(state: AppState) -> anyhow::Result<()> {
+/// Spawns the indexer, the crank and the HTTP server; returns the bound address.
+pub async fn start(state: AppState) -> anyhow::Result<SocketAddr> {
     ensure_treasury_ata(&state).await?;
     let poll = Duration::from_millis(state.cfg.poll_ms);
     tokio::spawn(snapshot::run_indexer(state.rpc.clone(), state.snapshot.clone(), state.refresh.clone(), poll));
     tokio::spawn(crank::run(state.clone(), poll));
     let listener = tokio::net::TcpListener::bind(&state.cfg.bind).await?;
+    let addr = listener.local_addr()?;
+    let app = routes::router(state);
 
-    tracing::info!("coordinator listening on {} ({})", state.cfg.bind, state.cfg.network);
-    axum::serve(listener, routes::router(state)).await?;
-    Ok(())
+    tokio::spawn(async move { axum::serve(listener, app).await });
+    Ok(addr)
+}
+
+/// Runs the coordinator until the process stops.
+pub async fn serve(state: AppState) -> anyhow::Result<()> {
+    let network = state.cfg.network.clone();
+    let addr = start(state).await?;
+
+    tracing::info!("coordinator listening on {addr} ({network})");
+    std::future::pending().await
 }

@@ -4,7 +4,7 @@ use axum::body::Bytes;
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::Json;
-use replicata_client::ClaimState;
+use replicata_client::{self as client, Claim, ClaimState, Pubkey};
 use replicata_core::{bundle, bundle_upload_message, from_hex, to_hex};
 use serde_json::{json, Value};
 use solana_signature::Signature;
@@ -33,6 +33,14 @@ fn verify_signature(experiment: &[u8; 32], worker: &[u8; 32], hash: &[u8; 32], s
     Ok(())
 }
 
+/// Read straight from the chain: the worker uploads right after its commit lands, before the
+/// indexer's next poll would see it.
+async fn claim_state(state: &AppState, experiment: &Pubkey, worker: &Pubkey) -> Option<ClaimState> {
+    let account = state.rpc.get_account(&client::claim_pda(experiment, worker)).await.ok()?;
+
+    client::decode::<Claim>(&account.data).map(|claim| claim.state)
+}
+
 pub async fn upload(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -44,11 +52,7 @@ pub async fn upload(
     let declared = from_hex(header(&headers, "x-output-hash")?).ok_or_else(|| ApiError::bad_request("X-Output-Hash must be 64 hex chars"))?;
     verify_signature(&experiment.to_bytes(), &worker.to_bytes(), &declared, header(&headers, "x-signature")?)?;
 
-    let state_of_claim = {
-        let snapshot = state.snapshot.read().await;
-        snapshot.claims_of(&experiment).iter().find(|c| c.worker == worker).map(|c| c.state)
-    };
-    match state_of_claim {
+    match claim_state(&state, &experiment, &worker).await {
         None => return Err(ApiError::not_found("claim")),
         Some(ClaimState::Committed | ClaimState::Revealed) => {}
         Some(_) => return Err(ApiError::conflict("claim_state", "bundles are accepted only for committed or revealed claims")),

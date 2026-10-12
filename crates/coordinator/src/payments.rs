@@ -13,6 +13,7 @@ use base64::Engine;
 use replicata_client::Pubkey;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
+use solana_transaction::versioned::VersionedTransaction;
 use x402_chain_solana::chain::{SolanaChainReference, SolanaTokenDeployment};
 use x402_chain_solana::V2SolanaExact;
 use x402_types::proto::v2;
@@ -111,8 +112,36 @@ fn failure_body(failure: &Failure, message: &str, faucet: &str) -> Value {
     }
 }
 
+/// `(source token account, amount)` of the `transfer_checked` inside an x402 payment header.
+pub fn payment_transfer(header: &str) -> Option<(Pubkey, u64)> {
+    let b64 = base64::engine::general_purpose::STANDARD;
+    let payload: Value = serde_json::from_slice(&b64.decode(header).ok()?).ok()?;
+    let tx_bytes = b64.decode(payload.get("payload")?.get("transaction")?.as_str()?).ok()?;
+    let tx: VersionedTransaction = bincode::deserialize(&tx_bytes).ok()?;
+    let keys = tx.message.static_account_keys();
+    let transfer = tx.message.instructions().iter().find(|ix| {
+        let program = keys.get(ix.program_id_index as usize);
+        program.is_some_and(|p| *p == replicata_client::TOKEN_PROGRAM_ID) && ix.data.first() == Some(&12)
+    })?;
+    let source = *keys.get(*transfer.accounts.first()? as usize)?;
+    let amount = u64::from_le_bytes(transfer.data.get(1..9)?.try_into().ok()?);
+
+    Some((source, amount))
+}
+
+/// Facilitators report an underfunded payer as a generic simulation failure; check it ourselves.
+async fn payer_short_of_funds(state: &AppState, header: Option<&str>) -> bool {
+    let Some((source, amount)) = header.and_then(payment_transfer) else {
+        return false;
+    };
+    let balance = state.rpc.get_token_account_balance(&source).await.ok().and_then(|b| b.amount.parse::<u64>().ok());
+
+    balance.unwrap_or(0) < amount
+}
+
 /// Rewrites `x402-axum`'s 402 responses into the documented error contract.
 pub async fn map_failures(State(state): State<AppState>, req: Request, next: Next) -> Response {
+    let header = req.headers().get(PAYMENT_HEADER).and_then(|v| v.to_str().ok()).map(str::to_string);
     let response = next.run(req).await;
     if response.status() != StatusCode::PAYMENT_REQUIRED {
         return response;
@@ -126,7 +155,10 @@ pub async fn map_failures(State(state): State<AppState>, req: Request, next: Nex
         Some(details) => (details, true),
         None => (payment_required_error(&parts.headers).unwrap_or_else(|| "payment required".into()), false),
     };
-    let failure = classify(&message, settlement);
+    let mut failure = classify(&message, settlement);
+    if failure == Failure::SettlementFailed && payer_short_of_funds(&state, header.as_deref()).await {
+        failure = Failure::InsufficientFunds;
+    }
     let faucet = if state.cfg.cluster == "localnet" { "scripts/localnet.sh fund <pubkey>" } else { replicata_core::net::USDC_FAUCET_URL };
 
     if failure == Failure::FacilitatorUnavailable {
