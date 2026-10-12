@@ -22,8 +22,8 @@ pub struct RevealResult<'info> {
 /// Reveals open once the commit window has closed, or as soon as every slot is taken and
 /// committed (nobody else can join), and close at `reveal_deadline`.
 pub fn reveal_window_open(experiment: &Experiment, now: i64) -> bool {
-    let all_committed = experiment.claims_count == experiment.max_claims
-        && experiment.commits_count == experiment.claims_count;
+    let all_committed =
+        experiment.claims_count == experiment.max_claims && experiment.commits_count == experiment.claims_count;
 
     now <= experiment.reveal_deadline && (now > experiment.commit_deadline || all_committed)
 }
@@ -39,10 +39,7 @@ pub fn handle_reveal(ctx: Context<RevealResult>, output_hash: [u8; 32], salt: [u
     require!(experiment.status == ExperimentStatus::Open, ReplicataError::ExperimentNotOpen);
     require!(reveal_window_open(experiment, now), ReplicataError::RevealWindowClosed);
     require!(claim.state == ClaimState::Committed, ReplicataError::InvalidClaimState);
-    require!(
-        commitment(&output_hash, &salt, &claim.worker) == claim.commitment,
-        ReplicataError::CommitmentMismatch
-    );
+    require!(commitment(&output_hash, &salt, &claim.worker) == claim.commitment, ReplicataError::CommitmentMismatch);
 
     claim.revealed_hash = output_hash;
     claim.salt = salt;

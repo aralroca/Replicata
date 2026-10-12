@@ -38,7 +38,12 @@ pub fn experiment_id(path: &str) -> Option<&str> {
 
 async fn load_verified(state: &AppState, path: &str) -> ApiResult<Verified> {
     let id = parse_pubkey(experiment_id(path).unwrap_or_default())?;
-    let exp = snapshot_with(state, &id).await.experiments.get(&id).cloned().ok_or_else(|| ApiError::not_found("experiment"))?;
+    let exp = snapshot_with(state, &id)
+        .await
+        .experiments
+        .get(&id)
+        .cloned()
+        .ok_or_else(|| ApiError::not_found("experiment"))?;
     if exp.status != ExperimentStatus::Replicated {
         return Err(ApiError::conflict("not_replicated", "the experiment has not been replicated yet"));
     }
@@ -53,7 +58,11 @@ async fn load_verified(state: &AppState, path: &str) -> ApiResult<Verified> {
 fn dataset_file(verified: &Verified, file: &str) -> ApiResult<Vec<u8>> {
     let files = bundle::unpack(&verified.bundle).map_err(anyhow::Error::from)?;
 
-    files.into_iter().find(|(name, _)| name == file).map(|(_, bytes)| bytes).ok_or_else(|| ApiError::not_found("dataset file"))
+    files
+        .into_iter()
+        .find(|(name, _)| name == file)
+        .map(|(_, bytes)| bytes)
+        .ok_or_else(|| ApiError::not_found("dataset file"))
 }
 
 /// Pre-paywall guard for `result` and `dataset`: 404/409 without charging anything.
@@ -72,7 +81,14 @@ pub async fn experiment_guard(State(state): State<AppState>, mut req: Request, n
     next.run(req).await
 }
 
-async fn record_or_conflict(state: &AppState, headers: &HeaderMap, settle: &Option<SettleResponse>, resource: &str, amount: u64, pay_to: &Pubkey) -> ApiResult<()> {
+async fn record_or_conflict(
+    state: &AppState,
+    headers: &HeaderMap,
+    settle: &Option<SettleResponse>,
+    resource: &str,
+    amount: u64,
+    pay_to: &Pubkey,
+) -> ApiResult<()> {
     if payments::record(state, headers, settle, resource, amount, pay_to).await? {
         return Ok(());
     }
@@ -93,7 +109,10 @@ pub async fn result(
         [
             (header::CONTENT_TYPE, HeaderValue::from_static("application/gzip")),
             (header::CONTENT_DISPOSITION, HeaderValue::from_str(&disposition).map_err(anyhow::Error::from)?),
-            (header::HeaderName::from_static("x-result-hash"), HeaderValue::from_str(&verified.result_hash).map_err(anyhow::Error::from)?),
+            (
+                header::HeaderName::from_static("x-result-hash"),
+                HeaderValue::from_str(&verified.result_hash).map_err(anyhow::Error::from)?,
+            ),
         ],
         verified.bundle,
     )
@@ -169,7 +188,8 @@ fn validate_publish(req: PublishRequest) -> ApiResult<ValidPublish> {
 
 /// Sub-second entropy for the nonce so two publishes in the same second do not collide.
 fn rand_suffix() -> u16 {
-    (std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().subsec_millis() % 1000) as u16
+    (std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().subsec_millis() % 1000)
+        as u16
 }
 
 /// Pre-paywall guard for `POST /v1/experiments`: invalid bodies are rejected for free.

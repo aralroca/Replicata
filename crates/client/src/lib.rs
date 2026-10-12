@@ -91,13 +91,21 @@ pub fn claim(worker: &Pubkey, experiment: &Pubkey, exp: &Experiment) -> Instruct
 }
 
 pub fn commit(worker: &Pubkey, experiment: &Pubkey, commitment: [u8; 32]) -> Instruction {
-    let accounts = replicata::accounts::CommitResult { worker: *worker, experiment: *experiment, claim: claim_pda(experiment, worker) };
+    let accounts = replicata::accounts::CommitResult {
+        worker: *worker,
+        experiment: *experiment,
+        claim: claim_pda(experiment, worker),
+    };
 
     ix(accounts, replicata::instruction::Commit { commitment })
 }
 
 pub fn reveal(worker: &Pubkey, experiment: &Pubkey, output_hash: [u8; 32], salt: [u8; 32]) -> Instruction {
-    let accounts = replicata::accounts::RevealResult { worker: *worker, experiment: *experiment, claim: claim_pda(experiment, worker) };
+    let accounts = replicata::accounts::RevealResult {
+        worker: *worker,
+        experiment: *experiment,
+        claim: claim_pda(experiment, worker),
+    };
 
     ix(accounts, replicata::instruction::Reveal { output_hash, salt })
 }
@@ -133,9 +141,7 @@ pub fn claim_royalties(experiment: &Pubkey, exp: &Experiment) -> Instruction {
     };
     let mut instruction = ix(accounts, replicata::instruction::ClaimRoyalties {});
 
-    instruction
-        .accounts
-        .extend(replicators(exp).iter().map(|w| AccountMeta::new(ata(w, &exp.mint), false)));
+    instruction.accounts.extend(replicators(exp).iter().map(|w| AccountMeta::new(ata(w, &exp.mint), false)));
     instruction
 }
 

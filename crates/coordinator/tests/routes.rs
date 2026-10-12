@@ -23,7 +23,8 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 const NETWORK: &str = "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1";
 
 fn database_url() -> String {
-    std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "postgres://replicata:replicata@127.0.0.1:54329/replicata".into())
+    std::env::var("TEST_DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://replicata:replicata@127.0.0.1:54329/replicata".into())
 }
 
 fn spec(seed: u64) -> JobSpec {
@@ -93,9 +94,13 @@ async fn fixture(facilitator: &str) -> Fixture {
     let (open_spec, replicated_spec) = (spec(rand_seed()), spec(rand_seed()));
     let mut snapshot = Snapshot::default();
     snapshot.experiments.insert(open, experiment(author, ExperimentStatus::Open, &open_spec, [0; 32]));
-    snapshot.experiments.insert(replicated, experiment(author, ExperimentStatus::Replicated, &replicated_spec, result_hash));
+    snapshot
+        .experiments
+        .insert(replicated, experiment(author, ExperimentStatus::Replicated, &replicated_spec, result_hash));
     snapshot.claims.insert(open, vec![claim(open, worker, ClaimState::Committed)]);
-    let db = db::connect(&database_url()).await.expect("Postgres for tests: run scripts/localnet.sh start or set TEST_DATABASE_URL");
+    let db = db::connect(&database_url())
+        .await
+        .expect("Postgres for tests: run scripts/localnet.sh start or set TEST_DATABASE_URL");
     db::insert_spec(&db, &to_hex(&open_spec.spec_hash()), &open_spec).await.unwrap();
     db::upsert_bundle(&db, &replicated.to_string(), &worker.to_string(), &to_hex(&result_hash), &bundle).await.unwrap();
     let state = AppState {
@@ -114,7 +119,16 @@ fn rand_seed() -> u64 {
 }
 
 fn claim(experiment: Pubkey, worker: Pubkey, state: ClaimState) -> Claim {
-    Claim { experiment, worker, commitment: [1; 32], revealed_hash: [0; 32], salt: [0; 32], state, claimed_at: now(), bump: 255 }
+    Claim {
+        experiment,
+        worker,
+        commitment: [1; 32],
+        revealed_hash: [0; 32],
+        salt: [0; 32],
+        state,
+        claimed_at: now(),
+        bump: 255,
+    }
 }
 
 fn config(facilitator: &str) -> Config {
@@ -153,7 +167,11 @@ async fn get(app: &Router, uri: &str) -> (StatusCode, Value) {
 async fn facilitator() -> MockServer {
     let server = MockServer::start().await;
     let supported = json!({"kinds": [{"x402Version": 2, "scheme": "exact", "network": NETWORK, "extra": {"feePayer": Pubkey::new_unique().to_string()}}], "extensions": [], "signers": {}});
-    Mock::given(method("GET")).and(path("/supported")).respond_with(ResponseTemplate::new(200).set_body_json(supported)).mount(&server).await;
+    Mock::given(method("GET"))
+        .and(path("/supported"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(supported))
+        .mount(&server)
+        .await;
     server
 }
 
@@ -174,7 +192,9 @@ async fn config_and_openapi() {
 async fn specs_are_validated_canonicalised_and_idempotent() {
     let f = fixture("http://127.0.0.1:9").await;
     let body = serde_json::to_vec(&spec(rand_seed())).unwrap();
-    let post = |body: Vec<u8>| Request::post("/v1/specs").header("content-type", "application/json").body(Body::from(body)).unwrap();
+    let post = |body: Vec<u8>| {
+        Request::post("/v1/specs").header("content-type", "application/json").body(Body::from(body)).unwrap()
+    };
 
     let (status, _, created) = call(&f.app, post(body.clone())).await;
     assert_eq!(status, StatusCode::CREATED);
@@ -222,17 +242,28 @@ async fn paid_routes_refuse_before_charging() {
     let (status, body) = get(&f.app, &format!("/v1/experiments/{}/result", f.open)).await;
     assert_eq!((status, body["error"].as_str()), (StatusCode::CONFLICT, Some("not_replicated")));
     assert_eq!(get(&f.app, &format!("/v1/experiments/{}/result", Pubkey::new_unique())).await.0, StatusCode::NOT_FOUND);
-    assert_eq!(get(&f.app, &format!("/v1/experiments/{}/dataset/missing.csv", f.replicated)).await.0, StatusCode::NOT_FOUND);
-    let bad_publish = Request::post("/v1/experiments").header("content-type", "application/json").body(Body::from("{\"authority\":\"x\"}")).unwrap();
+    assert_eq!(
+        get(&f.app, &format!("/v1/experiments/{}/dataset/missing.csv", f.replicated)).await.0,
+        StatusCode::NOT_FOUND
+    );
+    let bad_publish = Request::post("/v1/experiments")
+        .header("content-type", "application/json")
+        .body(Body::from("{\"authority\":\"x\"}"))
+        .unwrap();
     assert_eq!(call(&f.app, bad_publish).await.0, StatusCode::BAD_REQUEST);
-    assert!(server.received_requests().await.unwrap().iter().all(|r| r.url.path() == "/supported"), "no verify/settle calls");
+    assert!(
+        server.received_requests().await.unwrap().iter().all(|r| r.url.path() == "/supported"),
+        "no verify/settle calls"
+    );
 }
 
 #[tokio::test]
 async fn replicated_result_requires_an_x402_payment() {
     let server = facilitator().await;
     let f = fixture(&server.uri()).await;
-    let (status, headers, _) = call(&f.app, Request::get(format!("/v1/experiments/{}/result", f.replicated)).body(Body::empty()).unwrap()).await;
+    let (status, headers, _) =
+        call(&f.app, Request::get(format!("/v1/experiments/{}/result", f.replicated)).body(Body::empty()).unwrap())
+            .await;
 
     assert_eq!(status, StatusCode::PAYMENT_REQUIRED);
     let required = base64::engine::general_purpose::STANDARD.decode(headers.get("payment-required").unwrap()).unwrap();
@@ -246,16 +277,22 @@ async fn replicated_result_requires_an_x402_payment() {
 
 /// A syntactically valid V2 payment header for `accepts[0]` (the facilitator is mocked).
 async fn payment_header(f: &Fixture) -> String {
-    let (_, headers, _) = call(&f.app, Request::get(format!("/v1/experiments/{}/result", f.replicated)).body(Body::empty()).unwrap()).await;
+    let (_, headers, _) =
+        call(&f.app, Request::get(format!("/v1/experiments/{}/result", f.replicated)).body(Body::empty()).unwrap())
+            .await;
     let b64 = base64::engine::general_purpose::STANDARD;
-    let required: Value = serde_json::from_slice(&b64.decode(headers.get("payment-required").unwrap()).unwrap()).unwrap();
+    let required: Value =
+        serde_json::from_slice(&b64.decode(headers.get("payment-required").unwrap()).unwrap()).unwrap();
     let payload = json!({"x402Version": 2, "accepted": required["accepts"][0], "resource": required["resource"], "payload": {"transaction": "AA=="}});
 
     b64.encode(serde_json::to_vec(&payload).unwrap())
 }
 
 async fn paid_get(f: &Fixture, header: &str) -> (StatusCode, axum::http::HeaderMap, Vec<u8>) {
-    let req = Request::get(format!("/v1/experiments/{}/result", f.replicated)).header("payment-signature", header).body(Body::empty()).unwrap();
+    let req = Request::get(format!("/v1/experiments/{}/result", f.replicated))
+        .header("payment-signature", header)
+        .body(Body::empty())
+        .unwrap();
 
     call(&f.app, req).await
 }
@@ -265,7 +302,10 @@ async fn settled_payment_delivers_once_and_replays_are_rejected() {
     let server = facilitator().await;
     Mock::given(method("POST"))
         .and(path("/settle"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"success": true, "transaction": "5sig", "network": NETWORK, "payer": "payer1"})))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(json!({"success": true, "transaction": "5sig", "network": NETWORK, "payer": "payer1"})),
+        )
         .mount(&server)
         .await;
     let f = fixture(&server.uri()).await;
@@ -274,7 +314,10 @@ async fn settled_payment_delivers_once_and_replays_are_rejected() {
     let (status, headers, body) = paid_get(&f, &header).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, f.bundle);
-    assert_eq!(headers.get("x-result-hash").unwrap().to_str().unwrap(), to_hex(&bundle::hash_bundle(&f.bundle).unwrap()));
+    assert_eq!(
+        headers.get("x-result-hash").unwrap().to_str().unwrap(),
+        to_hex(&bundle::hash_bundle(&f.bundle).unwrap())
+    );
     assert!(headers.contains_key("payment-response"));
     assert!(db::payment_exists(&f.state.db, &hash_of(&header)).await.unwrap());
 
@@ -306,7 +349,10 @@ async fn failed_settlement_delivers_nothing() {
     let server = facilitator().await;
     Mock::given(method("POST"))
         .and(path("/settle"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"success": false, "errorReason": "transaction_simulation", "network": NETWORK})))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(json!({"success": false, "errorReason": "transaction_simulation", "network": NETWORK})),
+        )
         .mount(&server)
         .await;
     let f = fixture(&server.uri()).await;

@@ -169,10 +169,7 @@ fn reveal_checks_the_commitment() {
     let (experiment, workers) = env.with_claims(&Params::default(), 3);
     workers.iter().for_each(|w| env.commit(&experiment, w, [1; 32]).unwrap());
 
-    assert_program_err(
-        env.reveal_raw(&experiment, &workers[0], [1; 32], [0; 32]),
-        ReplicataError::CommitmentMismatch,
-    );
+    assert_program_err(env.reveal_raw(&experiment, &workers[0], [1; 32], [0; 32]), ReplicataError::CommitmentMismatch);
     assert_program_err(env.reveal(&experiment, &workers[0], [2; 32]), ReplicataError::CommitmentMismatch);
     env.reveal(&experiment, &workers[0], [1; 32]).unwrap();
 

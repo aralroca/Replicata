@@ -129,7 +129,13 @@ pub fn claim_view(experiment: &Pubkey, claim: &Claim, joined: &Joined) -> ClaimV
     }
 }
 
-pub fn experiment_view(id: &Pubkey, exp: &Experiment, snapshot: &Snapshot, joined: &Joined, now: i64) -> ExperimentView {
+pub fn experiment_view(
+    id: &Pubkey,
+    exp: &Experiment,
+    snapshot: &Snapshot,
+    joined: &Joined,
+    now: i64,
+) -> ExperimentView {
     let spec_hash = to_hex(&exp.spec_hash);
 
     ExperimentView {

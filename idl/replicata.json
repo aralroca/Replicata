@@ -1,0 +1,1096 @@
+{
+  "address": "G9Ssnp8rjg7gpi4Sm3EZLoC73z9pdXd9etJzUDH39Wj9",
+  "metadata": {
+    "name": "replicata",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Replicata: verifiable, paid replication of computational experiments"
+  },
+  "instructions": [
+    {
+      "name": "cancel_experiment",
+      "discriminator": [
+        45,
+        178,
+        175,
+        221,
+        94,
+        34,
+        54,
+        126
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true,
+          "relations": [
+            "experiment"
+          ]
+        },
+        {
+          "name": "experiment",
+          "writable": true
+        },
+        {
+          "name": "mint",
+          "relations": [
+            "experiment"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "relations": [
+            "experiment"
+          ]
+        },
+        {
+          "name": "authority_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claim",
+      "discriminator": [
+        62,
+        198,
+        214,
+        193,
+        213,
+        159,
+        108,
+        210
+      ],
+      "accounts": [
+        {
+          "name": "worker",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "experiment",
+          "writable": true
+        },
+        {
+          "name": "claim",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  108,
+                  97,
+                  105,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "experiment"
+              },
+              {
+                "kind": "account",
+                "path": "worker"
+              }
+            ]
+          }
+        },
+        {
+          "name": "worker_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  107,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "worker"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "relations": [
+            "experiment"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "relations": [
+            "experiment"
+          ]
+        },
+        {
+          "name": "worker_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claim_royalties",
+      "discriminator": [
+        238,
+        21,
+        168,
+        30,
+        248,
+        242,
+        60,
+        166
+      ],
+      "accounts": [
+        {
+          "name": "experiment",
+          "writable": true
+        },
+        {
+          "name": "mint",
+          "relations": [
+            "experiment"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "relations": [
+            "experiment"
+          ]
+        },
+        {
+          "name": "authority_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "commit",
+      "discriminator": [
+        223,
+        140,
+        142,
+        165,
+        229,
+        208,
+        156,
+        74
+      ],
+      "accounts": [
+        {
+          "name": "worker",
+          "signer": true,
+          "relations": [
+            "claim"
+          ]
+        },
+        {
+          "name": "experiment",
+          "writable": true,
+          "relations": [
+            "claim"
+          ]
+        },
+        {
+          "name": "claim",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  108,
+                  97,
+                  105,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "experiment"
+              },
+              {
+                "kind": "account",
+                "path": "worker"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "commitment",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "create_experiment",
+      "discriminator": [
+        13,
+        224,
+        230,
+        252,
+        170,
+        107,
+        114,
+        62
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "experiment",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  112,
+                  101,
+                  114,
+                  105,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              },
+              {
+                "kind": "arg",
+                "path": "args.nonce"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "experiment"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "authority_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "CreateExperimentArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "finalize",
+      "discriminator": [
+        171,
+        61,
+        218,
+        56,
+        127,
+        115,
+        12,
+        217
+      ],
+      "accounts": [
+        {
+          "name": "experiment",
+          "writable": true
+        },
+        {
+          "name": "mint",
+          "relations": [
+            "experiment"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "relations": [
+            "experiment"
+          ]
+        },
+        {
+          "name": "authority_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "reveal",
+      "discriminator": [
+        9,
+        35,
+        59,
+        190,
+        167,
+        249,
+        76,
+        115
+      ],
+      "accounts": [
+        {
+          "name": "worker",
+          "signer": true,
+          "relations": [
+            "claim"
+          ]
+        },
+        {
+          "name": "experiment",
+          "writable": true,
+          "relations": [
+            "claim"
+          ]
+        },
+        {
+          "name": "claim",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  108,
+                  97,
+                  105,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "experiment"
+              },
+              {
+                "kind": "account",
+                "path": "worker"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "output_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "withdraw_bond",
+      "discriminator": [
+        222,
+        199,
+        141,
+        31,
+        188,
+        93,
+        155,
+        40
+      ],
+      "accounts": [
+        {
+          "name": "worker",
+          "signer": true,
+          "relations": [
+            "claim"
+          ]
+        },
+        {
+          "name": "experiment",
+          "writable": true,
+          "relations": [
+            "claim"
+          ]
+        },
+        {
+          "name": "claim",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  108,
+                  97,
+                  105,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "experiment"
+              },
+              {
+                "kind": "account",
+                "path": "worker"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "relations": [
+            "experiment"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "relations": [
+            "experiment"
+          ]
+        },
+        {
+          "name": "worker_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Claim",
+      "discriminator": [
+        155,
+        70,
+        22,
+        176,
+        123,
+        215,
+        246,
+        102
+      ]
+    },
+    {
+      "name": "Experiment",
+      "discriminator": [
+        93,
+        88,
+        219,
+        4,
+        130,
+        32,
+        125,
+        30
+      ]
+    },
+    {
+      "name": "WorkerProfile",
+      "discriminator": [
+        40,
+        244,
+        208,
+        98,
+        69,
+        236,
+        70,
+        229
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "ZeroReward",
+      "msg": "Reward must be greater than zero"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidReplicationParams",
+      "msg": "Invalid replication parameters: need 1 <= k <= max_claims <= MAX_CLAIMS"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidAuthorShare",
+      "msg": "Author share must be at most 10000 basis points"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidDeadlines",
+      "msg": "Deadlines must satisfy now < commit_deadline < reveal_deadline"
+    },
+    {
+      "code": 6004,
+      "name": "ExperimentNotOpen",
+      "msg": "The experiment is not open"
+    },
+    {
+      "code": 6005,
+      "name": "HasClaims",
+      "msg": "The experiment already has claims and cannot be cancelled"
+    },
+    {
+      "code": 6006,
+      "name": "ClaimsFull",
+      "msg": "All claim slots are taken"
+    },
+    {
+      "code": 6007,
+      "name": "CommitWindowClosed",
+      "msg": "The commit window is closed"
+    },
+    {
+      "code": 6008,
+      "name": "RevealWindowClosed",
+      "msg": "The reveal window is not open"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidClaimState",
+      "msg": "The claim is not in the expected state"
+    },
+    {
+      "code": 6010,
+      "name": "CommitmentMismatch",
+      "msg": "The revealed hash and salt do not match the commitment"
+    },
+    {
+      "code": 6011,
+      "name": "NotReadyToFinalize",
+      "msg": "The experiment cannot be finalized yet"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidRemainingAccounts",
+      "msg": "Remaining accounts do not match the revealed claims"
+    },
+    {
+      "code": 6013,
+      "name": "NotReplicated",
+      "msg": "The experiment has not been replicated"
+    },
+    {
+      "code": 6014,
+      "name": "NoRoyalties",
+      "msg": "There are no royalties to distribute"
+    },
+    {
+      "code": 6015,
+      "name": "BondNotWithdrawable",
+      "msg": "Bonds can only be withdrawn from unresolved experiments"
+    },
+    {
+      "code": 6016,
+      "name": "Overflow",
+      "msg": "Arithmetic overflow"
+    }
+  ],
+  "types": [
+    {
+      "name": "Claim",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "experiment",
+            "type": "pubkey"
+          },
+          {
+            "name": "worker",
+            "type": "pubkey"
+          },
+          {
+            "name": "commitment",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "revealed_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "salt",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "state",
+            "type": {
+              "defined": {
+                "name": "ClaimState"
+              }
+            }
+          },
+          {
+            "name": "claimed_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ClaimState",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Claimed"
+          },
+          {
+            "name": "Committed"
+          },
+          {
+            "name": "Revealed"
+          },
+          {
+            "name": "Paid"
+          },
+          {
+            "name": "Slashed"
+          },
+          {
+            "name": "Refunded"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreateExperimentArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "nonce",
+            "type": "u64"
+          },
+          {
+            "name": "spec_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "image_digest",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "reward",
+            "type": "u64"
+          },
+          {
+            "name": "bond",
+            "type": "u64"
+          },
+          {
+            "name": "k",
+            "type": "u8"
+          },
+          {
+            "name": "max_claims",
+            "type": "u8"
+          },
+          {
+            "name": "commit_deadline",
+            "type": "i64"
+          },
+          {
+            "name": "reveal_deadline",
+            "type": "i64"
+          },
+          {
+            "name": "access_price",
+            "type": "u64"
+          },
+          {
+            "name": "author_share_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Experiment",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "nonce",
+            "type": "u64"
+          },
+          {
+            "name": "spec_hash",
+            "docs": [
+              "sha256 of the canonical JobSpec JSON (see `replicata-core`)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "image_digest",
+            "docs": [
+              "Raw sha256 of the container image digest."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "reward",
+            "type": "u64"
+          },
+          {
+            "name": "bond",
+            "type": "u64"
+          },
+          {
+            "name": "k",
+            "type": "u8"
+          },
+          {
+            "name": "max_claims",
+            "type": "u8"
+          },
+          {
+            "name": "claims_count",
+            "type": "u8"
+          },
+          {
+            "name": "commits_count",
+            "type": "u8"
+          },
+          {
+            "name": "reveals_count",
+            "type": "u8"
+          },
+          {
+            "name": "commit_deadline",
+            "type": "i64"
+          },
+          {
+            "name": "reveal_deadline",
+            "type": "i64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "ExperimentStatus"
+              }
+            }
+          },
+          {
+            "name": "result_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agree_count",
+            "type": "u8"
+          },
+          {
+            "name": "replicators",
+            "docs": [
+              "Workers whose result matched the majority (first `agree_count` entries)."
+            ],
+            "type": {
+              "array": [
+                "pubkey",
+                5
+              ]
+            }
+          },
+          {
+            "name": "access_price",
+            "docs": [
+              "Price (token base units) of one x402 access to the verified result."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "author_share_bps",
+            "type": "u16"
+          },
+          {
+            "name": "escrowed",
+            "docs": [
+              "Tokens in the vault that are owed (reward + bonds). Anything above is royalties."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "royalties_paid",
+            "type": "u64"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExperimentStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Open"
+          },
+          {
+            "name": "Replicated"
+          },
+          {
+            "name": "Unresolved"
+          },
+          {
+            "name": "Cancelled"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WorkerProfile",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "worker",
+            "type": "pubkey"
+          },
+          {
+            "name": "claims",
+            "type": "u32"
+          },
+          {
+            "name": "ok",
+            "type": "u32"
+          },
+          {
+            "name": "bad",
+            "type": "u32"
+          },
+          {
+            "name": "earned",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "BPS_DENOMINATOR",
+      "type": "u16",
+      "value": "10000"
+    },
+    {
+      "name": "CLAIM_SEED",
+      "type": "bytes",
+      "value": "[99, 108, 97, 105, 109]"
+    },
+    {
+      "name": "EXPERIMENT_SEED",
+      "type": "bytes",
+      "value": "[101, 120, 112, 101, 114, 105, 109, 101, 110, 116]"
+    },
+    {
+      "name": "MAX_CLAIMS",
+      "docs": [
+        "Upper bound on claims per experiment. `finalize` pays every revealed claim in a single",
+        "transaction (3 accounts each), which keeps the transaction under the 1232-byte limit."
+      ],
+      "type": "u8",
+      "value": "5"
+    },
+    {
+      "name": "WORKER_SEED",
+      "type": "bytes",
+      "value": "[119, 111, 114, 107, 101, 114]"
+    }
+  ]
+}

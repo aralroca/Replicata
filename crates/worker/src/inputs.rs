@@ -21,7 +21,12 @@ pub async fn fetch_all(http: &ClientWithMiddleware, inputs: &[Input], dir: &Path
 
 pub fn verify(input: &Input, bytes: &[u8]) -> anyhow::Result<()> {
     let actual = hex::encode(Sha256::digest(bytes));
-    anyhow::ensure!(actual == input.sha256.to_lowercase(), "input {} has sha256 {actual}, expected {}", input.path, input.sha256);
+    anyhow::ensure!(
+        actual == input.sha256.to_lowercase(),
+        "input {} has sha256 {actual}, expected {}",
+        input.path,
+        input.sha256
+    );
     Ok(())
 }
 
@@ -38,11 +43,16 @@ mod tests {
     #[tokio::test]
     async fn downloads_and_verifies_inputs() {
         let server = MockServer::start().await;
-        Mock::given(path("/data.csv")).respond_with(ResponseTemplate::new(200).set_body_bytes(b"1,2\n")).mount(&server).await;
+        Mock::given(path("/data.csv"))
+            .respond_with(ResponseTemplate::new(200).set_body_bytes(b"1,2\n"))
+            .mount(&server)
+            .await;
         let dir = tempfile::tempdir().unwrap();
         let http = reqwest_middleware::ClientBuilder::new(reqwest::Client::new()).build();
 
-        fetch_all(&http, &[input(format!("{}/data.csv", server.uri()), b"1,2\n", "a/data.csv")], dir.path()).await.unwrap();
+        fetch_all(&http, &[input(format!("{}/data.csv", server.uri()), b"1,2\n", "a/data.csv")], dir.path())
+            .await
+            .unwrap();
         assert_eq!(std::fs::read(dir.path().join("a/data.csv")).unwrap(), b"1,2\n");
 
         let tampered = input(format!("{}/data.csv", server.uri()), b"other", "x.csv");
@@ -52,7 +62,10 @@ mod tests {
     #[tokio::test]
     async fn unpaid_inputs_fail_with_a_clear_error() {
         let server = MockServer::start().await;
-        Mock::given(path("/paid")).respond_with(ResponseTemplate::new(402).set_body_string("{\"error\":\"payment_required\"}")).mount(&server).await;
+        Mock::given(path("/paid"))
+            .respond_with(ResponseTemplate::new(402).set_body_string("{\"error\":\"payment_required\"}"))
+            .mount(&server)
+            .await;
         let http = reqwest_middleware::ClientBuilder::new(reqwest::Client::new()).build();
         let dir = tempfile::tempdir().unwrap();
 

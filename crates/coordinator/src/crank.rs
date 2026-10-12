@@ -21,10 +21,16 @@ pub fn jobs(snapshot: &Snapshot, now: i64) -> Vec<Job> {
         .iter()
         .filter_map(|(id, exp)| {
             if client::phase(exp, now) == Phase::Finalizable {
-                let revealed = snapshot.claims_of(id).iter().filter(|c| c.state == ClaimState::Revealed).map(|c| c.worker).collect();
+                let revealed = snapshot
+                    .claims_of(id)
+                    .iter()
+                    .filter(|c| c.state == ClaimState::Revealed)
+                    .map(|c| c.worker)
+                    .collect();
                 return Some(Job::Finalize { experiment: *id, revealed });
             }
-            (exp.status == ExperimentStatus::Replicated && snapshot.royalties_pending(exp) > 0).then_some(Job::Royalties { experiment: *id })
+            (exp.status == ExperimentStatus::Replicated && snapshot.royalties_pending(exp) > 0)
+                .then_some(Job::Royalties { experiment: *id })
         })
         .collect()
 }
@@ -92,7 +98,16 @@ mod tests {
     }
 
     fn claim(experiment: Pubkey, state: ClaimState) -> Claim {
-        Claim { experiment, worker: Pubkey::new_unique(), commitment: [0; 32], revealed_hash: [0; 32], salt: [0; 32], state, claimed_at: 0, bump: 0 }
+        Claim {
+            experiment,
+            worker: Pubkey::new_unique(),
+            commitment: [0; 32],
+            revealed_hash: [0; 32],
+            salt: [0; 32],
+            state,
+            claimed_at: 0,
+            bump: 0,
+        }
     }
 
     #[test]

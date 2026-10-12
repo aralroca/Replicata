@@ -11,15 +11,17 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Context;
-use solana_client::nonblocking::rpc_client::RpcClient;
-use x402_chain_solana::chain::config::SolanaChainConfig;
+use replicata_client::Pubkey;
 use solana_account::Account;
+use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_client::rpc_config::RpcSimulateTransactionConfig;
 use solana_commitment_config::CommitmentConfig;
 use solana_signature::Signature;
 use solana_transaction::versioned::VersionedTransaction;
-use x402_chain_solana::chain::{Address, SolanaChainProvider, SolanaChainProviderError, SolanaChainProviderLike, SolanaChainReference};
-use replicata_client::Pubkey;
+use x402_chain_solana::chain::config::SolanaChainConfig;
+use x402_chain_solana::chain::{
+    Address, SolanaChainProvider, SolanaChainProviderError, SolanaChainProviderLike, SolanaChainReference,
+};
 use x402_chain_solana::V2SolanaExact;
 use x402_facilitator_local::{handlers, FacilitatorLocal};
 use x402_types::chain::{ChainId, ChainIdPattern, ChainProviderOps, ChainRegistry, FromConfig};
@@ -36,11 +38,18 @@ struct ConfirmedProvider {
 }
 
 impl SolanaChainProviderLike for ConfirmedProvider {
-    async fn simulate_transaction_with_config(&self, tx: &VersionedTransaction, cfg: RpcSimulateTransactionConfig) -> Result<(), SolanaChainProviderError> {
+    async fn simulate_transaction_with_config(
+        &self,
+        tx: &VersionedTransaction,
+        cfg: RpcSimulateTransactionConfig,
+    ) -> Result<(), SolanaChainProviderError> {
         self.inner.simulate_transaction_with_config(tx, cfg).await
     }
 
-    async fn get_multiple_accounts(&self, pubkeys: &[Pubkey]) -> Result<Vec<Option<Account>>, SolanaChainProviderError> {
+    async fn get_multiple_accounts(
+        &self,
+        pubkeys: &[Pubkey],
+    ) -> Result<Vec<Option<Account>>, SolanaChainProviderError> {
         Ok(self.rpc.get_multiple_accounts(pubkeys).await?)
     }
 
@@ -64,7 +73,11 @@ impl SolanaChainProviderLike for ConfirmedProvider {
         self.inner.sign(tx)
     }
 
-    async fn send_and_confirm(&self, tx: &VersionedTransaction, commitment: CommitmentConfig) -> Result<Signature, SolanaChainProviderError> {
+    async fn send_and_confirm(
+        &self,
+        tx: &VersionedTransaction,
+        commitment: CommitmentConfig,
+    ) -> Result<Signature, SolanaChainProviderError> {
         self.inner.send_and_confirm(tx, commitment).await
     }
 }
@@ -110,17 +123,22 @@ async fn chain_reference(rpc_url: &str) -> anyhow::Result<SolanaChainReference> 
 }
 
 fn fee_payer_base58(path: &str) -> anyhow::Result<String> {
-    let bytes: Vec<u8> = serde_json::from_str(&std::fs::read_to_string(path).with_context(|| format!("reading {path}"))?)?;
+    let bytes: Vec<u8> =
+        serde_json::from_str(&std::fs::read_to_string(path).with_context(|| format!("reading {path}"))?)?;
 
     Ok(bs58::encode(bytes).into_string())
 }
 
 async fn scheme_registry(rpc_url: &str, fee_payer: &str) -> anyhow::Result<(SchemeRegistry, String)> {
     let reference = chain_reference(rpc_url).await?;
-    let inner: x402_chain_solana::chain::config::SolanaChainConfigInner = serde_json::from_value(serde_json::json!({ "signer": fee_payer_base58(fee_payer)?, "rpc": rpc_url }))?;
+    let inner: x402_chain_solana::chain::config::SolanaChainConfigInner =
+        serde_json::from_value(serde_json::json!({ "signer": fee_payer_base58(fee_payer)?, "rpc": rpc_url }))?;
     let config = SolanaChainConfig { chain_reference: reference, inner };
     let inner = SolanaChainProvider::from_config(&config).await.map_err(|e| anyhow::anyhow!("{e}"))?;
-    let provider = ConfirmedProvider { inner, rpc: RpcClient::new_with_commitment(rpc_url.to_string(), CommitmentConfig::confirmed()) };
+    let provider = ConfirmedProvider {
+        inner,
+        rpc: RpcClient::new_with_commitment(rpc_url.to_string(), CommitmentConfig::confirmed()),
+    };
     let chain_id = config.chain_id();
     let schemes = vec![SchemeConfig {
         enabled: true,

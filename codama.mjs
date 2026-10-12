@@ -8,7 +8,7 @@ import { renderVisitor } from "@codama/renderers-js";
 import { createFromRoot, updateInstructionsVisitor } from "codama";
 
 const idlPath = fileURLToPath(
-  new URL("./target/idl/replicata.json", import.meta.url)
+  new URL("./idl/replicata.json", import.meta.url)
 );
 const webPath = fileURLToPath(new URL("./apps/web", import.meta.url));
 const idl = JSON.parse(readFileSync(idlPath, "utf8"));

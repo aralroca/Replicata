@@ -40,9 +40,13 @@ pub fn docker() -> anyhow::Result<Docker> {
     if std::env::var_os("DOCKER_HOST").is_some() {
         return Docker::connect_with_local_defaults().context("cannot reach Docker at DOCKER_HOST");
     }
-    let socket = socket_candidates().into_iter().find(|p| p.exists()).context("cannot find a Docker socket (is Docker running?)")?;
+    let socket = socket_candidates()
+        .into_iter()
+        .find(|p| p.exists())
+        .context("cannot find a Docker socket (is Docker running?)")?;
 
-    Docker::connect_with_unix(&socket.to_string_lossy(), 120, bollard::API_DEFAULT_VERSION).context("cannot reach Docker")
+    Docker::connect_with_unix(&socket.to_string_lossy(), 120, bollard::API_DEFAULT_VERSION)
+        .context("cannot reach Docker")
 }
 
 /// Pulls `image@sha256:...` unless it is already present locally.
@@ -84,7 +88,8 @@ pub fn host_config(spec: &JobSpec, inputs: &Path, out: &Path) -> HostConfig {
 
 async fn logs(docker: &Docker, id: &str) -> String {
     let options = LogsOptionsBuilder::default().stdout(true).stderr(true).tail("200").build();
-    let chunks: Vec<String> = docker.logs(id, Some(options)).filter_map(|c| async { c.ok().map(|c| c.to_string()) }).collect().await;
+    let chunks: Vec<String> =
+        docker.logs(id, Some(options)).filter_map(|c| async { c.ok().map(|c| c.to_string()) }).collect().await;
 
     chunks.concat()
 }
@@ -104,6 +109,20 @@ async fn wait(docker: &Docker, id: &str, timeout: Duration) -> (i64, bool) {
     }
 }
 
+/// Never run as root: use the owner of the output directory, so the experiment can write its
+/// results (with every capability dropped, root could not write into a user-owned mount).
+#[cfg(unix)]
+fn run_as(out: &Path) -> Option<String> {
+    use std::os::unix::fs::MetadataExt;
+
+    std::fs::metadata(out).ok().map(|m| format!("{}:{}", m.uid(), m.gid()))
+}
+
+#[cfg(not(unix))]
+fn run_as(_out: &Path) -> Option<String> {
+    None
+}
+
 /// Runs the experiment; `out` must be an empty, writable directory.
 pub async fn run(docker: &Docker, spec: &JobSpec, inputs: &Path, out: &Path) -> anyhow::Result<RunOutcome> {
     let image = spec.image_ref();
@@ -114,11 +133,13 @@ pub async fn run(docker: &Docker, spec: &JobSpec, inputs: &Path, out: &Path) -> 
         env: Some(container_env(spec)),
         network_disabled: Some(true),
         working_dir: Some("/out".into()),
+        user: run_as(out),
         host_config: Some(host_config(spec, inputs, out)),
         ..Default::default()
     };
     let name = format!("replicata-{}", rand::random::<u64>());
-    let created = docker.create_container(Some(CreateContainerOptionsBuilder::default().name(&name).build()), body).await?;
+    let created =
+        docker.create_container(Some(CreateContainerOptionsBuilder::default().name(&name).build()), body).await?;
     docker.start_container(&created.id, None).await?;
     let (exit_code, timed_out) = wait(docker, &created.id, Duration::from_secs(spec.timeout_s.into())).await;
     let logs = logs(docker, &created.id).await;

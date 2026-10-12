@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  AGAVE_VERSION: v4.1.2
+  ANCHOR_VERSION: 1.2.1
+
+jobs:
+  rust:
+    name: Rust (program, core, coordinator, worker)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: replicata
+          POSTGRES_PASSWORD: replicata
+          POSTGRES_DB: replicata
+        ports: ["54329:5432"]
+        options: >-
+          --health-cmd "pg_isready -U replicata" --health-interval 2s --health-timeout 3s --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Solana (Agave) and Anchor
+        run: scripts/ci-install-solana.sh
+      - name: Build program and check the committed IDL
+        run: |
+          anchor build
+          diff -u idl/replicata.json target/idl/replicata.json
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Tests (incl. Docker sandbox and cross-arch determinism of the examples)
+        env:
+          TEST_DATABASE_URL: postgres://replicata:replicata@127.0.0.1:54329/replicata
+        run: cargo test --workspace
+
+  e2e:
+    name: End-to-end (localnet + x402 facilitator + Docker)
+    runs-on: ubuntu-latest
+    needs: rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Solana (Agave) and Anchor
+        run: scripts/ci-install-solana.sh
+      - run: anchor build
+      - name: Full suite, 3 runs in a row
+        run: scripts/e2e-local.sh 3
+
+  web:
+    name: Web (codegen, lint, unit, Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Generated client is up to date with idl/replicata.json
+        run: pnpm gen:check
+      - run: pnpm -C apps/web lint
+      - run: pnpm -C apps/web test
+      - run: pnpm -C apps/web build
+      - run: pnpm -C apps/web exec playwright install --with-deps chromium
+      - run: pnpm -C apps/web test:e2e

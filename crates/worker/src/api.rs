@@ -82,7 +82,13 @@ impl Coordinator {
     }
 
     /// Uploads a bundle signed with the worker key over `experiment ‖ H`.
-    pub async fn upload_bundle(&self, experiment: &str, worker: &Keypair, output_hash: &[u8; 32], bundle: Vec<u8>) -> anyhow::Result<()> {
+    pub async fn upload_bundle(
+        &self,
+        experiment: &str,
+        worker: &Keypair,
+        output_hash: &[u8; 32],
+        bundle: Vec<u8>,
+    ) -> anyhow::Result<()> {
         let experiment_key: replicata_client::Pubkey = experiment.parse()?;
         let message = replicata_core::bundle_upload_message(&experiment_key.to_bytes(), output_hash);
         let response = self

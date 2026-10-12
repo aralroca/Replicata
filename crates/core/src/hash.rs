@@ -33,10 +33,8 @@ pub fn hash_files<'a, I>(files: I) -> Result<OutputHash, HashError>
 where
     I: IntoIterator<Item = (&'a str, &'a [u8])>,
 {
-    let mut entries: Vec<(&str, [u8; 32])> = files
-        .into_iter()
-        .map(|(name, bytes)| (name, Sha256::digest(bytes).into()))
-        .collect();
+    let mut entries: Vec<(&str, [u8; 32])> =
+        files.into_iter().map(|(name, bytes)| (name, Sha256::digest(bytes).into())).collect();
     entries.sort_by(|a, b| a.0.as_bytes().cmp(b.0.as_bytes()));
     if let Some(pair) = entries.windows(2).find(|pair| pair[0].0 == pair[1].0) {
         return Err(HashError::Duplicate(pair[0].0.to_string()));

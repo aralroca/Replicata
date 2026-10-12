@@ -61,7 +61,13 @@ mod tests {
 
         state.jobs.insert(
             "exp".into(),
-            Job { stage: Stage::Committed, salt: Some("aa".into()), output_hash: Some("bb".into()), bundle: None, error: None },
+            Job {
+                stage: Stage::Committed,
+                salt: Some("aa".into()),
+                output_hash: Some("bb".into()),
+                bundle: None,
+                error: None,
+            },
         );
         state.save(&path).unwrap();
         let loaded = State::load(&path).unwrap();

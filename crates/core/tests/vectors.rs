@@ -30,11 +30,7 @@ fn spec_cases() -> Vec<Value> {
 }
 
 fn output_cases() -> Vec<Vec<(&'static str, &'static str)>> {
-    vec![
-        vec![],
-        vec![("result.json", "{\"pi\":3.14159}")],
-        vec![("b.txt", "2"), ("a/z.txt", "1"), ("a.txt", "0")],
-    ]
+    vec![vec![], vec![("result.json", "{\"pi\":3.14159}")], vec![("b.txt", "2"), ("a/z.txt", "1"), ("a.txt", "0")]]
 }
 
 fn build() -> Value {

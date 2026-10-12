@@ -16,7 +16,10 @@ use x402_reqwest::X402Client;
 const WAIT: Duration = Duration::from_secs(90);
 
 fn expected_hash(name: &str) -> String {
-    std::fs::read_to_string(root().join("examples/experiments").join(name).join("expected_hash")).unwrap().trim().to_string()
+    std::fs::read_to_string(root().join("examples/experiments").join(name).join("expected_hash"))
+        .unwrap()
+        .trim()
+        .to_string()
 }
 
 #[tokio::test]
@@ -27,7 +30,7 @@ async fn happy_path_replicates_pays_workers_and_sells_the_result() {
     let workers: Vec<_> = (0..3).map(|_| ctx.user(10)).collect();
     let consumer = ctx.user(1);
     let author_start = ctx.balance(&author.pubkey()).await;
-    let id = ctx.publish(&author, &example_spec("pi-montecarlo"), 3, 3, 3 * USDC, USDC, 10_000).await.unwrap();
+    let id = ctx.publish(&author, &example_spec("pi-montecarlo"), terms(3, 3 * USDC, USDC, 10_000)).await.unwrap();
 
     let stages = replicate(workers.iter().map(|w| ctx.worker(w, false)).collect(), &id).await;
     assert!(stages.iter().all(|s| matches!(s, Ok(Stage::Revealed))), "{stages:?}");
@@ -64,7 +67,7 @@ async fn a_cheating_worker_loses_its_bond_to_the_honest_majority() {
     let ctx = Ctx::start().await.unwrap();
     let author = ctx.user(100);
     let workers: Vec<_> = (0..3).map(|_| ctx.user(10)).collect();
-    let id = ctx.publish(&author, &example_spec("lorenz-int"), 3, 3, 3 * USDC, USDC, 10_000).await.unwrap();
+    let id = ctx.publish(&author, &example_spec("lorenz-int"), terms(3, 3 * USDC, USDC, 10_000)).await.unwrap();
 
     let jobs = vec![ctx.worker(&workers[0], false), ctx.worker(&workers[1], true), ctx.worker(&workers[2], false)];
     replicate(jobs, &id).await;
@@ -85,7 +88,7 @@ async fn a_non_reproducible_experiment_is_unresolved_and_everyone_is_refunded() 
     let author = ctx.user(100);
     let workers: Vec<_> = (0..3).map(|_| ctx.user(10)).collect();
     let author_start = ctx.balance(&author.pubkey()).await;
-    let id = ctx.publish(&author, &example_spec("non-reproducible"), 3, 3, 3 * USDC, USDC, 10_000).await.unwrap();
+    let id = ctx.publish(&author, &example_spec("non-reproducible"), terms(3, 3 * USDC, USDC, 10_000)).await.unwrap();
 
     replicate(workers.iter().map(|w| ctx.worker(w, false)).collect(), &id).await;
     ctx.wait_for(&id, WAIT, |v| v.status == "unresolved").await;
@@ -102,7 +105,7 @@ async fn a_non_reproducible_experiment_is_unresolved_and_everyone_is_refunded() 
 async fn replicated_experiment(ctx: &Ctx) -> replicata_client::Pubkey {
     let author = ctx.user(10);
     let worker = ctx.user(5);
-    let id = ctx.publish(&author, &example_spec("lorenz-int"), 1, 1, USDC, USDC, 10_000).await.unwrap();
+    let id = ctx.publish(&author, &example_spec("lorenz-int"), terms(1, USDC, USDC, 10_000)).await.unwrap();
 
     replicate(vec![ctx.worker(&worker, false)], &id).await;
     ctx.wait_for(&id, WAIT, |v| v.status == "replicated").await;
@@ -114,7 +117,12 @@ struct Recorder(Arc<Mutex<Vec<String>>>);
 
 #[async_trait::async_trait]
 impl Middleware for Recorder {
-    async fn handle(&self, req: reqwest::Request, ext: &mut Extensions, next: Next<'_>) -> reqwest_middleware::Result<reqwest::Response> {
+    async fn handle(
+        &self,
+        req: reqwest::Request,
+        ext: &mut Extensions,
+        next: Next<'_>,
+    ) -> reqwest_middleware::Result<reqwest::Response> {
         if let Some(header) = req.headers().get("payment-signature") {
             self.0.lock().unwrap().push(header.to_str().unwrap().to_string());
         }
@@ -131,7 +139,7 @@ async fn failed_and_replayed_payments_never_deliver_or_double_charge() {
 
     // Not replicated yet → 409 before any payment is attempted.
     let author = ctx.user(10);
-    let open = ctx.publish(&author, &example_spec("lorenz-int"), 1, 1, USDC, 0, 10_000).await.unwrap();
+    let open = ctx.publish(&author, &example_spec("lorenz-int"), terms(1, USDC, 0, 10_000)).await.unwrap();
     let payer = ctx.user(1);
     let chain = ctx.chain(&payer);
     let http = pay::paying_client(chain.keypair.clone(), chain.rpc.clone());
@@ -156,7 +164,8 @@ async fn failed_and_replayed_payments_never_deliver_or_double_charge() {
 
     // A successful payment can't be replayed.
     let recorder = Recorder::default();
-    let x402 = X402Client::new().register(V2SolanaExactClient::new(chain.keypair.clone(), pay::ConfirmedRpc(chain.rpc.clone())));
+    let x402 = X402Client::new()
+        .register(V2SolanaExactClient::new(chain.keypair.clone(), pay::ConfirmedRpc(chain.rpc.clone())));
     let recording = ClientBuilder::new(reqwest::Client::new()).with(x402).with(recorder.clone()).build();
     assert_eq!(recording.get(&result_url).send().await.unwrap().status(), 200);
     let header = recorder.0.lock().unwrap().last().cloned().expect("a payment header was sent");
@@ -199,7 +208,10 @@ async fn flaky_facilitator(supported: &str) -> String {
                 let n = socket.read(&mut buf).await.unwrap_or(0);
                 let request = String::from_utf8_lossy(&buf[..n]);
                 let response = if request.starts_with("GET /supported") {
-                    format!("HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{supported}", supported.len())
+                    format!(
+                        "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{supported}",
+                        supported.len()
+                    )
                 } else {
                     "HTTP/1.1 503 Service Unavailable\r\ncontent-length: 0\r\n\r\n".to_string()
                 };
@@ -215,11 +227,14 @@ async fn flaky_facilitator(supported: &str) -> String {
 async fn an_agent_publishes_by_paying_the_fee_over_x402() {
     let ctx = Ctx::start().await.unwrap();
     let agent = ctx.user(10);
-    let config: serde_json::Value = reqwest::get(format!("{}/v1/config", ctx.base)).await.unwrap().json().await.unwrap();
+    let config: serde_json::Value =
+        reqwest::get(format!("{}/v1/config", ctx.base)).await.unwrap().json().await.unwrap();
     let treasury: replicata_client::Pubkey = config["treasury"].as_str().unwrap().parse().unwrap();
     let treasury_before = ctx.balance(&treasury).await;
-    let mut request: serde_json::Value =
-        serde_json::from_str(&std::fs::read_to_string(root().join("examples/experiments/lorenz-int/publish.json")).unwrap()).unwrap();
+    let mut request: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(root().join("examples/experiments/lorenz-int/publish.json")).unwrap(),
+    )
+    .unwrap();
     request["authority"] = agent.pubkey().to_string().into();
     let chain = ctx.chain(&agent);
     let http = pay::paying_client(chain.keypair.clone(), chain.rpc.clone());
@@ -231,7 +246,12 @@ async fn an_agent_publishes_by_paying_the_fee_over_x402() {
     assert_eq!(ctx.balance(&treasury).await, treasury_before + 100_000, "publish fee paid to the treasury");
     assert_eq!(ctx.balance(&agent.pubkey()).await, 10 * USDC - 100_000 - 3 * USDC, "fee + escrowed reward");
 
-    let bad = http.post(format!("{}/v1/experiments", ctx.base)).json(&serde_json::json!({"authority": "x"})).send().await.unwrap();
+    let bad = http
+        .post(format!("{}/v1/experiments", ctx.base))
+        .json(&serde_json::json!({"authority": "x"}))
+        .send()
+        .await
+        .unwrap();
     assert_eq!(bad.status(), 400, "invalid bodies are rejected before payment");
 }
 
@@ -241,7 +261,7 @@ async fn a_worker_that_crashes_after_committing_resumes_and_reveals() {
     let ctx = Ctx::start().await.unwrap();
     let author = ctx.user(10);
     let keypair = ctx.user(5);
-    let id = ctx.publish(&author, &example_spec("lorenz-int"), 1, 1, USDC, USDC, 10_000).await.unwrap();
+    let id = ctx.publish(&author, &example_spec("lorenz-int"), terms(1, USDC, USDC, 10_000)).await.unwrap();
     let mut first = ctx.worker(&keypair, false);
     first.exit_after = Some(Stage::Committed);
 

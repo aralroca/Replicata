@@ -96,7 +96,10 @@ async fn init(cli: &Cli) -> anyhow::Result<()> {
     let (keypair, created) = load_or_create_keypair(&path)?;
     let config = Coordinator::new(&cli.coordinator).config().await?;
     println!("{} worker key {} ({})", if created { "created" } else { "existing" }, keypair.pubkey(), path.display());
-    println!("cluster: {} — fund it with SOL ({}) and USDC ({})", config.cluster, config.faucets.sol, config.faucets.usdc);
+    println!(
+        "cluster: {} — fund it with SOL ({}) and USDC ({})",
+        config.cluster, config.faucets.sol, config.faucets.usdc
+    );
     let chain = Chain::new(&config.rpc_url, Arc::new(keypair), config.mint.parse()?);
     match chain.ensure_token_account().await {
         Ok(()) => println!("USDC token account ready"),
@@ -108,11 +111,17 @@ async fn init(cli: &Cli) -> anyhow::Result<()> {
 async fn status(cli: &Cli) -> anyhow::Result<()> {
     let (api, chain) = connect(cli).await?;
     let (lamports, tokens) = chain.balances().await?;
-    let profile: serde_json::Value = reqwest::get(format!("{}/v1/workers/{}", api.base, chain.pubkey())).await?.json().await?;
+    let profile: serde_json::Value =
+        reqwest::get(format!("{}/v1/workers/{}", api.base, chain.pubkey())).await?.json().await?;
     println!("worker  {}", chain.pubkey());
     println!("SOL     {:.4}", lamports as f64 / 1e9);
     println!("USDC    {}", format_usdc(tokens));
-    println!("record  ok {} · bad {} · earned {} USDC", profile["ok"], profile["bad"], format_usdc(profile["earned"].as_u64().unwrap_or(0)));
+    println!(
+        "record  ok {} · bad {} · earned {} USDC",
+        profile["ok"],
+        profile["bad"],
+        format_usdc(profile["earned"].as_u64().unwrap_or(0))
+    );
     Ok(())
 }
 

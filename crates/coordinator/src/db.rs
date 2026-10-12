@@ -23,18 +23,19 @@ pub async fn insert_spec(pool: &PgPool, spec_hash: &str, spec: &JobSpec) -> sqlx
 }
 
 pub async fn specs(pool: &PgPool, hashes: &[String]) -> sqlx::Result<Vec<(String, JobSpec)>> {
-    let rows = sqlx::query("SELECT spec_hash, spec FROM specs WHERE spec_hash = ANY($1)")
-        .bind(hashes)
-        .fetch_all(pool)
-        .await?;
+    let rows =
+        sqlx::query("SELECT spec_hash, spec FROM specs WHERE spec_hash = ANY($1)").bind(hashes).fetch_all(pool).await?;
 
-    Ok(rows
-        .into_iter()
-        .map(|row| (row.get("spec_hash"), row.get::<sqlx::types::Json<JobSpec>, _>("spec").0))
-        .collect())
+    Ok(rows.into_iter().map(|row| (row.get("spec_hash"), row.get::<sqlx::types::Json<JobSpec>, _>("spec").0)).collect())
 }
 
-pub async fn upsert_bundle(pool: &PgPool, experiment: &str, worker: &str, output_hash: &str, data: &[u8]) -> sqlx::Result<()> {
+pub async fn upsert_bundle(
+    pool: &PgPool,
+    experiment: &str,
+    worker: &str,
+    output_hash: &str,
+    data: &[u8],
+) -> sqlx::Result<()> {
     sqlx::query(
         "INSERT INTO bundles (experiment, worker, output_hash, data) VALUES ($1, $2, $3, $4)
          ON CONFLICT (experiment, worker) DO UPDATE SET output_hash = EXCLUDED.output_hash, data = EXCLUDED.data, created_at = now()",
@@ -60,11 +61,12 @@ pub async fn bundle_keys(pool: &PgPool, experiments: &[String]) -> sqlx::Result<
 
 /// Any bundle of `experiment` whose canonical hash is `output_hash`.
 pub async fn bundle_with_hash(pool: &PgPool, experiment: &str, output_hash: &str) -> sqlx::Result<Option<Vec<u8>>> {
-    let row = sqlx::query("SELECT data FROM bundles WHERE experiment = $1 AND output_hash = $2 ORDER BY created_at LIMIT 1")
-        .bind(experiment)
-        .bind(output_hash)
-        .fetch_optional(pool)
-        .await?;
+    let row =
+        sqlx::query("SELECT data FROM bundles WHERE experiment = $1 AND output_hash = $2 ORDER BY created_at LIMIT 1")
+            .bind(experiment)
+            .bind(output_hash)
+            .fetch_optional(pool)
+            .await?;
 
     Ok(row.map(|row| row.get("data")))
 }
@@ -79,10 +81,8 @@ pub struct Payment<'a> {
 }
 
 pub async fn payment_exists(pool: &PgPool, payment_hash: &str) -> sqlx::Result<bool> {
-    let row = sqlx::query("SELECT 1 FROM payments WHERE payment_hash = $1")
-        .bind(payment_hash)
-        .fetch_optional(pool)
-        .await?;
+    let row =
+        sqlx::query("SELECT 1 FROM payments WHERE payment_hash = $1").bind(payment_hash).fetch_optional(pool).await?;
 
     Ok(row.is_some())
 }

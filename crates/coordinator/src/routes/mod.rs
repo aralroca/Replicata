@@ -16,17 +16,13 @@ use crate::state::AppState;
 
 /// CORS must expose the x402 headers so browsers can read them.
 fn cors() -> CorsLayer {
-    CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any)
-        .expose_headers([
-            "payment-required".parse().unwrap(),
-            "payment-response".parse().unwrap(),
-            "x-result-hash".parse().unwrap(),
-            "content-disposition".parse().unwrap(),
-            "retry-after".parse().unwrap(),
-        ])
+    CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any).expose_headers([
+        "payment-required".parse().unwrap(),
+        "payment-response".parse().unwrap(),
+        "x-result-hash".parse().unwrap(),
+        "content-disposition".parse().unwrap(),
+        "retry-after".parse().unwrap(),
+    ])
 }
 
 fn paid_routes(state: &AppState) -> Router<AppState> {

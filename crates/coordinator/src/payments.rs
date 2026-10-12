@@ -27,7 +27,8 @@ pub const PAYMENT_HEADER: &str = "payment-signature";
 const MAX_ERROR_BODY: usize = 64 * 1024;
 
 pub fn token(cfg: &Config) -> SolanaTokenDeployment {
-    let reference = SolanaChainReference::from_str(cfg.network.trim_start_matches("solana:")).expect("valid CAIP-2 network");
+    let reference =
+        SolanaChainReference::from_str(cfg.network.trim_start_matches("solana:")).expect("valid CAIP-2 network");
 
     SolanaTokenDeployment::new(reference, cfg.mint.into(), cfg.decimals)
 }
@@ -48,14 +49,25 @@ pub async fn replay_guard(State(state): State<AppState>, req: Request, next: Nex
     };
 
     match db::payment_exists(&state.db, &hash).await {
-        Ok(true) => (StatusCode::CONFLICT, Json(json!({ "error": "payment_replayed", "message": "this payment was already used" }))).into_response(),
+        Ok(true) => (
+            StatusCode::CONFLICT,
+            Json(json!({ "error": "payment_replayed", "message": "this payment was already used" })),
+        )
+            .into_response(),
         Ok(false) => next.run(req).await,
         Err(err) => crate::error::ApiError::from(err).into_response(),
     }
 }
 
 /// Persists a settled payment. Returns `false` on a concurrent replay.
-pub async fn record(state: &AppState, headers: &HeaderMap, settle: &Option<SettleResponse>, resource: &str, amount: u64, pay_to: &Pubkey) -> anyhow::Result<bool> {
+pub async fn record(
+    state: &AppState,
+    headers: &HeaderMap,
+    settle: &Option<SettleResponse>,
+    resource: &str,
+    amount: u64,
+    pay_to: &Pubkey,
+) -> anyhow::Result<bool> {
     let hash = payment_hash(headers).unwrap_or_default();
     let settle = settle.as_ref().map(|s| &s.0);
     let field = |name: &str| settle.and_then(|s| s.get(name)).and_then(Value::as_str);
@@ -85,7 +97,8 @@ pub fn classify(error: &str, settlement: bool) -> Failure {
     if lower.contains("insufficient") {
         return Failure::InsufficientFunds;
     }
-    let unreachable = ["error sending request", "connection refused", "timed out", "dns error", "connect error", "503", "502", "504"];
+    let unreachable =
+        ["error sending request", "connection refused", "timed out", "dns error", "connect error", "503", "502", "504"];
     if unreachable.iter().any(|needle| lower.contains(needle)) {
         return Failure::FacilitatorUnavailable;
     }

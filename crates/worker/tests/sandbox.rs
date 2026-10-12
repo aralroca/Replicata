@@ -85,6 +85,14 @@ async fn non_zero_exit_is_reported() {
 }
 
 #[tokio::test]
+async fn never_runs_as_root() {
+    let (outcome, dir) = run("id -u > /out/uid", 30).await;
+
+    assert_eq!(outcome.exit_code, 0, "{}", outcome.logs);
+    assert_ne!(std::fs::read_to_string(dir.path().join("out/uid")).unwrap().trim(), "0");
+}
+
+#[tokio::test]
 async fn unknown_digest_fails_clearly() {
     let dir = tempdir();
     let mut bad = spec("true", 10);

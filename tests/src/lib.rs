@@ -4,6 +4,9 @@
 //! (semver trick), so instructions built by `replicata-client` are sent to LiteSVM directly
 //! — every test here also exercises the client used by the coordinator and the worker.
 
+// `FailedTransactionMetadata` (LiteSVM's error, with logs) is large by design; tests want it whole.
+#![allow(clippy::result_large_err)]
+
 use anchor_lang::prelude::Pubkey;
 use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
 use litesvm::types::FailedTransactionMetadata;
@@ -37,7 +40,10 @@ pub fn code(err: ReplicataError) -> u32 {
 /// Custom error code returned by a failed transaction, if any.
 pub fn custom_code(result: &TxResult) -> Option<u32> {
     match result {
-        Err(FailedTransactionMetadata { err: TransactionError::InstructionError(_, InstructionError::Custom(c)), .. }) => Some(*c),
+        Err(FailedTransactionMetadata {
+            err: TransactionError::InstructionError(_, InstructionError::Custom(c)),
+            ..
+        }) => Some(*c),
         _ => None,
     }
 }
@@ -166,7 +172,8 @@ impl Env {
 
     pub fn send(&mut self, ix: Instruction, signers: &[&Keypair]) -> TxResult {
         self.svm.expire_blockhash();
-        let tx = Transaction::new_signed_with_payer(&[ix], Some(&signers[0].pubkey()), signers, self.svm.latest_blockhash());
+        let tx =
+            Transaction::new_signed_with_payer(&[ix], Some(&signers[0].pubkey()), signers, self.svm.latest_blockhash());
 
         self.svm.send_transaction(tx).map(|_| ())
     }
@@ -251,7 +258,13 @@ impl Env {
         self.commit_raw(experiment, worker, commitment)
     }
 
-    pub fn reveal_raw(&mut self, experiment: &Pubkey, worker: &Keypair, output_hash: [u8; 32], salt: [u8; 32]) -> TxResult {
+    pub fn reveal_raw(
+        &mut self,
+        experiment: &Pubkey,
+        worker: &Keypair,
+        output_hash: [u8; 32],
+        salt: [u8; 32],
+    ) -> TxResult {
         self.send(client::reveal(&worker.pubkey(), experiment, output_hash, salt), &[worker])
     }
 
@@ -264,7 +277,12 @@ impl Env {
         client::finalize(experiment, &self.experiment(experiment), workers).accounts.split_off(5)
     }
 
-    pub fn finalize_ix(&self, experiment: &Pubkey, remaining: Vec<AccountMeta>, authority_token_account: Pubkey) -> Instruction {
+    pub fn finalize_ix(
+        &self,
+        experiment: &Pubkey,
+        remaining: Vec<AccountMeta>,
+        authority_token_account: Pubkey,
+    ) -> Instruction {
         let mut ix = client::finalize(experiment, &self.experiment(experiment), &[]);
 
         ix.accounts[3].pubkey = authority_token_account;

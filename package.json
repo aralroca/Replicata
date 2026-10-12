@@ -4,6 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@11.9.0",
   "scripts": {
+    "idl": "anchor build && cp target/idl/replicata.json idl/replicata.json",
     "gen": "node codama.mjs",
     "gen:check": "node codama.mjs && git diff --exit-code -- apps/web/src/generated && test -z \"$(git status --porcelain -- apps/web/src/generated)\"",
     "web:dev": "pnpm -C apps/web dev",

@@ -91,7 +91,10 @@ fn matches(view: &ExperimentView, q: &ListQuery) -> bool {
         && q.author.as_deref().is_none_or(|a| a == view.authority)
 }
 
-pub async fn list_experiments(State(state): State<AppState>, Query(q): Query<ListQuery>) -> ApiResult<Json<Vec<ExperimentView>>> {
+pub async fn list_experiments(
+    State(state): State<AppState>,
+    Query(q): Query<ListQuery>,
+) -> ApiResult<Json<Vec<ExperimentView>>> {
     let snapshot = state.snapshot.read().await.clone();
     let mut ids: Vec<Pubkey> = snapshot.experiments.keys().copied().collect();
     ids.sort_by_key(|id| std::cmp::Reverse((snapshot.experiments[id].created_at, *id)));
@@ -133,7 +136,8 @@ pub async fn get_worker(State(state): State<AppState>, Path(worker): Path<String
 pub async fn get_author(State(state): State<AppState>, Path(author): Path<String>) -> ApiResult<Json<AuthorView>> {
     let author = parse_pubkey(&author)?;
     let snapshot = state.snapshot.read().await.clone();
-    let ids: Vec<Pubkey> = snapshot.experiments.iter().filter(|(_, e)| e.authority == author).map(|(id, _)| *id).collect();
+    let ids: Vec<Pubkey> =
+        snapshot.experiments.iter().filter(|(_, e)| e.authority == author).map(|(id, _)| *id).collect();
     let experiments = render(&state, &snapshot, ids).await?;
 
     Ok(Json(AuthorView {

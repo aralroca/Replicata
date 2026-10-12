@@ -29,7 +29,8 @@ impl Chain {
 
     pub async fn send(&self, instructions: &[ProgramInstruction]) -> anyhow::Result<String> {
         let blockhash = self.rpc.get_latest_blockhash().await?;
-        let tx = Transaction::new_signed_with_payer(instructions, Some(&self.pubkey()), &[self.keypair.as_ref()], blockhash);
+        let tx =
+            Transaction::new_signed_with_payer(instructions, Some(&self.pubkey()), &[self.keypair.as_ref()], blockhash);
 
         Ok(self.rpc.send_and_confirm_transaction(&tx).await?.to_string())
     }

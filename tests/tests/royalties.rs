@@ -6,7 +6,11 @@ use solana_signer::Signer;
 
 const A: [u8; 32] = [0xaa; 32];
 
-fn replicated(env: &mut Env, params: &Params, hashes: &[[u8; 32]]) -> (anchor_lang::prelude::Pubkey, Vec<solana_keypair::Keypair>) {
+fn replicated(
+    env: &mut Env,
+    params: &Params,
+    hashes: &[[u8; 32]],
+) -> (anchor_lang::prelude::Pubkey, Vec<solana_keypair::Keypair>) {
     let (experiment, workers) = env.with_claims(params, hashes.len());
 
     workers.iter().zip(hashes).for_each(|(w, h)| env.commit(&experiment, w, *h).unwrap());

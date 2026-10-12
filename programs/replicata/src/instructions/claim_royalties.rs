@@ -45,7 +45,8 @@ pub fn handle_claim_royalties<'info>(ctx: Context<'info, ClaimRoyalties<'info>>)
     require!(available > 0, ReplicataError::NoRoyalties);
     let (author_amount, per) = split_royalties(available, experiment.author_share_bps, agree);
     let token_program = ctx.accounts.token_program.to_account_info();
-    let payer = Vault { experiment, vault: &ctx.accounts.vault, mint: &ctx.accounts.mint, token_program: &token_program };
+    let payer =
+        Vault { experiment, vault: &ctx.accounts.vault, mint: &ctx.accounts.mint, token_program: &token_program };
 
     for (info, worker) in ctx.remaining_accounts.iter().zip(experiment.replicators.iter()) {
         load_token_account(info, worker, &experiment.mint)?;

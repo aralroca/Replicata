@@ -42,21 +42,19 @@ pub fn ready_to_finalize(experiment: &Experiment, now: i64) -> bool {
     now > experiment.reveal_deadline || (all_revealed && no_more_claims && experiment.claims_count > 0)
 }
 
-fn load_revealed<'info>(experiment: &Experiment, key: &Pubkey, remaining: &'info [AccountInfo<'info>]) -> Result<Vec<Revealed<'info>>> {
-    require!(
-        remaining.len() == 3 * experiment.reveals_count as usize,
-        ReplicataError::InvalidRemainingAccounts
-    );
+fn load_revealed<'info>(
+    experiment: &Experiment,
+    key: &Pubkey,
+    remaining: &'info [AccountInfo<'info>],
+) -> Result<Vec<Revealed<'info>>> {
+    require!(remaining.len() == 3 * experiment.reveals_count as usize, ReplicataError::InvalidRemainingAccounts);
     let mut out: Vec<Revealed<'info>> = Vec::with_capacity(experiment.reveals_count as usize);
 
     for triple in remaining.chunks(3) {
         let claim = Account::<Claim>::try_from(&triple[0])?;
         require_keys_eq!(claim.experiment, *key, ReplicataError::InvalidRemainingAccounts);
         require!(claim.state == ClaimState::Revealed, ReplicataError::InvalidRemainingAccounts);
-        require!(
-            out.iter().all(|r| r.claim.key() != claim.key()),
-            ReplicataError::InvalidRemainingAccounts
-        );
+        require!(out.iter().all(|r| r.claim.key() != claim.key()), ReplicataError::InvalidRemainingAccounts);
         load_token_account(&triple[1], &claim.worker, &experiment.mint)?;
         let profile = Account::<WorkerProfile>::try_from(&triple[2])?;
         require_keys_eq!(profile.worker, claim.worker, ReplicataError::InvalidRemainingAccounts);
@@ -87,9 +85,25 @@ pub fn handle_finalize<'info>(ctx: Context<'info, Finalize<'info>>) -> Result<()
     let quorum = experiment.reveals_count >= experiment.k && (agree as u16) * 2 > experiment.reveals_count as u16;
 
     if quorum {
-        settle_replicated(&mut ctx.accounts.experiment, &ctx.accounts.vault, &ctx.accounts.mint, &ctx.accounts.token_program, &ctx.accounts.authority_token_account, &mut revealed, hash, agree)?;
+        settle_replicated(
+            &mut ctx.accounts.experiment,
+            &ctx.accounts.vault,
+            &ctx.accounts.mint,
+            &ctx.accounts.token_program,
+            &ctx.accounts.authority_token_account,
+            &mut revealed,
+            hash,
+            agree,
+        )?;
     } else {
-        settle_unresolved(&mut ctx.accounts.experiment, &ctx.accounts.vault, &ctx.accounts.mint, &ctx.accounts.token_program, &ctx.accounts.authority_token_account, &mut revealed)?;
+        settle_unresolved(
+            &mut ctx.accounts.experiment,
+            &ctx.accounts.vault,
+            &ctx.accounts.mint,
+            &ctx.accounts.token_program,
+            &ctx.accounts.authority_token_account,
+            &mut revealed,
+        )?;
     }
     revealed.iter().try_for_each(|r| {
         r.claim.exit(&crate::ID)?;
@@ -164,10 +178,8 @@ fn settle_unresolved<'info>(
         payer.pay(r.token_account, bond)?;
         r.claim.state = ClaimState::Refunded;
     }
-    let refunded = bond
-        .checked_mul(revealed.len() as u64)
-        .and_then(|b| b.checked_add(reward))
-        .ok_or(ReplicataError::Overflow)?;
+    let refunded =
+        bond.checked_mul(revealed.len() as u64).and_then(|b| b.checked_add(reward)).ok_or(ReplicataError::Overflow)?;
 
     experiment.escrowed = experiment.escrowed.checked_sub(refunded).ok_or(ReplicataError::Overflow)?;
     experiment.status = ExperimentStatus::Unresolved;

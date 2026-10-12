@@ -22,7 +22,8 @@ pub fn home() -> PathBuf {
 }
 
 pub fn read_keypair(path: &Path) -> anyhow::Result<Keypair> {
-    let bytes: Vec<u8> = serde_json::from_str(&std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?)?;
+    let bytes: Vec<u8> =
+        serde_json::from_str(&std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?)?;
 
     Keypair::try_from(bytes.as_slice()).context("invalid keypair file")
 }

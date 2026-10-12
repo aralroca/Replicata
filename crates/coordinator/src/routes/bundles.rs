@@ -49,13 +49,16 @@ pub async fn upload(
 ) -> ApiResult<(StatusCode, Json<Value>)> {
     let experiment = parse_pubkey(&id)?;
     let worker = parse_pubkey(header(&headers, "x-worker")?)?;
-    let declared = from_hex(header(&headers, "x-output-hash")?).ok_or_else(|| ApiError::bad_request("X-Output-Hash must be 64 hex chars"))?;
+    let declared = from_hex(header(&headers, "x-output-hash")?)
+        .ok_or_else(|| ApiError::bad_request("X-Output-Hash must be 64 hex chars"))?;
     verify_signature(&experiment.to_bytes(), &worker.to_bytes(), &declared, header(&headers, "x-signature")?)?;
 
     match claim_state(&state, &experiment, &worker).await {
         None => return Err(ApiError::not_found("claim")),
         Some(ClaimState::Committed | ClaimState::Revealed) => {}
-        Some(_) => return Err(ApiError::conflict("claim_state", "bundles are accepted only for committed or revealed claims")),
+        Some(_) => {
+            return Err(ApiError::conflict("claim_state", "bundles are accepted only for committed or revealed claims"))
+        }
     }
 
     let actual = bundle::hash_bundle(&body).map_err(|e| ApiError::bad_request(format!("invalid bundle: {e}")))?;

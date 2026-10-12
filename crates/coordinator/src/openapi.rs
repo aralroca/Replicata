@@ -15,8 +15,17 @@ use crate::views::{AuthorView, ClaimView, ExperimentView, HistoryEntry, WorkerVi
             the PAYMENT-REQUIRED header, pay and retry with PAYMENT-SIGNATURE. See docs/API.md."
     ),
     paths(
-        config, post_spec, get_spec, list_experiments, get_experiment, upload_bundle, get_worker, get_author,
-        get_result, get_dataset, publish
+        config,
+        post_spec,
+        get_spec,
+        list_experiments,
+        get_experiment,
+        upload_bundle,
+        get_worker,
+        get_author,
+        get_result,
+        get_dataset,
+        publish
     ),
     components(schemas(ExperimentView, ClaimView, WorkerView, HistoryEntry, AuthorView))
 )]

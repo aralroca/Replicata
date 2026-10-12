@@ -60,7 +60,8 @@ fn scenario() -> impl Strategy<Value = Scenario> {
 
 /// Expected `(replicated, majority hash index)` according to the written rules.
 fn model(s: &Scenario) -> (bool, Option<u8>) {
-    let reveals: Vec<u8> = s.actions.iter().filter_map(|a| if let Action::Reveal(h) = a { Some(*h) } else { None }).collect();
+    let reveals: Vec<u8> =
+        s.actions.iter().filter_map(|a| if let Action::Reveal(h) = a { Some(*h) } else { None }).collect();
     let best = (0u8..3).map(|h| (h, reveals.iter().filter(|r| **r == h).count())).max_by_key(|(_, c)| *c);
     let quorum = best.is_some_and(|(_, c)| reveals.len() >= s.k as usize && c * 2 > reveals.len());
 
@@ -104,7 +105,14 @@ fn run(s: Scenario) -> Result<(), TestCaseError> {
     let revealers: Vec<&Keypair> = workers
         .iter()
         .zip(&s.actions)
-        .filter_map(|(w, a)| if let Action::Reveal(h) = a { env.reveal(&experiment, w, hash(*h)).unwrap(); Some(w) } else { None })
+        .filter_map(|(w, a)| {
+            if let Action::Reveal(h) = a {
+                env.reveal(&experiment, w, hash(*h)).unwrap();
+                Some(w)
+            } else {
+                None
+            }
+        })
         .collect();
     env.advance(100);
     let revealed_keys: Vec<_> = revealers.iter().map(|w| w.pubkey()).collect();

@@ -11,10 +11,10 @@ async fn seed_web_scenarios() {
     let ctx = Ctx::start().await.unwrap();
     let author = ctx.user(100);
     let spec = example_spec("lorenz-int");
-    let replicated = ctx.publish(&author, &spec, 1, 1, USDC, USDC, 10_000).await.unwrap();
+    let replicated = ctx.publish(&author, &spec, terms(1, USDC, USDC, 10_000)).await.unwrap();
     // Priced far above what the test wallet holds → the "insufficient funds" scenario.
-    let expensive = ctx.publish(&author, &spec, 1, 1, USDC, USDC, 1_000_000 * USDC).await.unwrap();
-    let pending = ctx.publish(&author, &example_spec("pi-montecarlo"), 3, 3, USDC, USDC, 10_000).await.unwrap();
+    let expensive = ctx.publish(&author, &spec, terms(1, USDC, USDC, 1_000_000 * USDC)).await.unwrap();
+    let pending = ctx.publish(&author, &example_spec("pi-montecarlo"), terms(3, USDC, USDC, 10_000)).await.unwrap();
 
     replicate(vec![ctx.worker(&ctx.user(5), false)], &replicated).await;
     replicate(vec![ctx.worker(&ctx.user(5), false)], &expensive).await;

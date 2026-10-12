@@ -82,9 +82,7 @@ impl JobSpec {
 
     /// The 32 raw bytes of `image_digest`, stored on-chain as `Experiment.image_digest`.
     pub fn image_digest_bytes(&self) -> Option<[u8; 32]> {
-        self.image_digest
-            .strip_prefix("sha256:")
-            .and_then(crate::from_hex)
+        self.image_digest.strip_prefix("sha256:").and_then(crate::from_hex)
     }
 
     /// `image@sha256:...`, the only reference the worker ever pulls.
@@ -199,7 +197,8 @@ mod tests {
 
     #[test]
     fn validation_errors() {
-        let cases: Vec<(fn(&mut JobSpec), SpecError)> = vec![
+        type Mutation = fn(&mut JobSpec);
+        let cases: Vec<(Mutation, SpecError)> = vec![
             (|s| s.version = 2, SpecError::Version(2)),
             (|s| s.title = " ".into(), SpecError::Title),
             (|s| s.image_digest = "sha256:xyz".into(), SpecError::Digest),

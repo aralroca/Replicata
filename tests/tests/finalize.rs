@@ -203,7 +203,10 @@ fn finalize_rejects_missing_duplicate_or_foreign_accounts() {
     // Passing someone else's profile.
     let mut wrong_profile = env.finalize_remaining(&experiment, &keys);
     wrong_profile.swap(2, 5);
-    assert_program_err(env.finalize_with(&experiment, wrong_profile, &cranker), ReplicataError::InvalidRemainingAccounts);
+    assert_program_err(
+        env.finalize_with(&experiment, wrong_profile, &cranker),
+        ReplicataError::InvalidRemainingAccounts,
+    );
 
     let honest = env.finalize_remaining(&experiment, &keys);
     env.finalize_with(&experiment, honest, &cranker).unwrap();

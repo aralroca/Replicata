@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use base64::Engine;
+use replicata_client::Pubkey;
 use reqwest_middleware::ClientWithMiddleware;
 use solana_account::Account;
 use solana_client::client_error::ClientError;
@@ -13,10 +14,9 @@ use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_client::rpc_config::RpcSimulateTransactionConfig;
 use solana_client::rpc_response::{RpcPrioritizationFee, RpcResult, RpcSimulateTransactionResult};
 use solana_commitment_config::CommitmentConfig;
-use solana_message::Hash;
-use replicata_client::Pubkey;
-use solana_transaction::versioned::VersionedTransaction;
 use solana_keypair::Keypair;
+use solana_message::Hash;
+use solana_transaction::versioned::VersionedTransaction;
 use solana_transaction::Transaction;
 use x402_chain_solana::chain::rpc::RpcClientLike;
 use x402_chain_solana::V2SolanaExactClient;
@@ -47,7 +47,10 @@ impl RpcClientLike for ConfirmedRpc {
         async move { RpcClient::simulate_transaction_with_config(&self.0, transaction, config).await }
     }
 
-    fn get_recent_prioritization_fees(&self, addresses: &[Pubkey]) -> impl Future<Output = Result<Vec<RpcPrioritizationFee>, ClientError>> + Send {
+    fn get_recent_prioritization_fees(
+        &self,
+        addresses: &[Pubkey],
+    ) -> impl Future<Output = Result<Vec<RpcPrioritizationFee>, ClientError>> + Send {
         RpcClient::get_recent_prioritization_fees(&self.0, addresses)
     }
 
@@ -95,7 +98,12 @@ pub async fn buy(http: &ClientWithMiddleware, coordinator: &str, id: &str) -> an
 }
 
 /// Agent flow: pay the publish fee over x402, sign the returned transaction and send it.
-pub async fn publish(http: &ClientWithMiddleware, chain: &Chain, coordinator: &str, request: serde_json::Value) -> anyhow::Result<(String, String)> {
+pub async fn publish(
+    http: &ClientWithMiddleware,
+    chain: &Chain,
+    coordinator: &str,
+    request: serde_json::Value,
+) -> anyhow::Result<(String, String)> {
     let response = check(http.post(format!("{coordinator}/v1/experiments")).json(&request).send().await?).await?;
     let body: serde_json::Value = response.json().await?;
     let tx_b64 = body["transaction"].as_str().context("missing transaction")?;

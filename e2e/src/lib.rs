@@ -36,6 +36,21 @@ pub fn load_env() -> HashMap<String, String> {
     vars
 }
 
+/// Economic terms of a test experiment.
+#[derive(Clone, Copy)]
+pub struct Terms {
+    pub k: u8,
+    pub max_claims: u8,
+    pub reward: u64,
+    pub bond: u64,
+    pub access_price: u64,
+}
+
+/// `k` of `k` replications with the given reward, bond and access price.
+pub fn terms(k: u8, reward: u64, bond: u64, access_price: u64) -> Terms {
+    Terms { k, max_claims: k, reward, bond, access_price }
+}
+
 pub struct Ctx {
     pub base: String,
     pub api: Coordinator,
@@ -58,7 +73,13 @@ impl Ctx {
         let addr = replicata_coordinator::start(replicata_coordinator::build_state(cfg).await?).await?;
         let base = format!("http://{addr}");
 
-        Ok(Self { api: Coordinator::new(&base), base, rpc_url: env["RPC_URL"].clone(), mint: env["USDC_MINT"].parse()?, facilitator_url })
+        Ok(Self {
+            api: Coordinator::new(&base),
+            base,
+            rpc_url: env["RPC_URL"].clone(),
+            mint: env["USDC_MINT"].parse()?,
+            facilitator_url,
+        })
     }
 
     pub async fn start() -> anyhow::Result<Self> {
@@ -100,11 +121,18 @@ impl Ctx {
         std::fs::create_dir_all(&base).unwrap();
         let home = tempfile::Builder::new().prefix("worker").tempdir_in(base).unwrap().keep();
 
-        Worker { http: pay::paying_client(chain.keypair.clone(), chain.rpc.clone()), chain, api: self.api.clone(), home, chaos, exit_after: None }
+        Worker {
+            http: pay::paying_client(chain.keypair.clone(), chain.rpc.clone()),
+            chain,
+            api: self.api.clone(),
+            home,
+            chaos,
+            exit_after: None,
+        }
     }
 
     /// What the web app does: upload the spec, then sign `create_experiment` with the author's wallet.
-    pub async fn publish(&self, author: &Arc<Keypair>, spec: &JobSpec, k: u8, max_claims: u8, reward: u64, bond: u64, access_price: u64) -> anyhow::Result<Pubkey> {
+    pub async fn publish(&self, author: &Arc<Keypair>, spec: &JobSpec, terms: Terms) -> anyhow::Result<Pubkey> {
         let response = reqwest::Client::new().post(format!("{}/v1/specs", self.base)).json(spec).send().await?;
         anyhow::ensure!(response.status().is_success(), "spec upload failed: {}", response.text().await?);
         let now = replicata_coordinator::snapshot::now();
@@ -112,13 +140,13 @@ impl Ctx {
             nonce: rand_nonce(),
             spec_hash: spec.spec_hash(),
             image_digest: spec.image_digest_bytes().context("digest")?,
-            reward,
-            bond,
-            k,
-            max_claims,
+            reward: terms.reward,
+            bond: terms.bond,
+            k: terms.k,
+            max_claims: terms.max_claims,
             commit_deadline: now + 90,
             reveal_deadline: now + 180,
-            access_price,
+            access_price: terms.access_price,
             author_share_bps: 7_000,
         };
         let (experiment, ix) = client::create_experiment(&author.pubkey(), &self.mint, args);
@@ -128,14 +156,25 @@ impl Ctx {
     }
 
     /// Polls the coordinator until `check` holds (or panics after `timeout`).
-    pub async fn wait_for(&self, id: &Pubkey, timeout: Duration, check: impl Fn(&ExperimentView) -> bool) -> ExperimentView {
+    pub async fn wait_for(
+        &self,
+        id: &Pubkey,
+        timeout: Duration,
+        check: impl Fn(&ExperimentView) -> bool,
+    ) -> ExperimentView {
         let started = Instant::now();
         loop {
             if let Ok(view) = self.api.experiment(&id.to_string()).await {
                 if check(&view) {
                     return view;
                 }
-                assert!(started.elapsed() < timeout, "timed out; last view: status={} phase={} claims={:?}", view.status, view.phase, view.claims.iter().map(|c| &c.state).collect::<Vec<_>>());
+                assert!(
+                    started.elapsed() < timeout,
+                    "timed out; last view: status={} phase={} claims={:?}",
+                    view.status,
+                    view.phase,
+                    view.claims.iter().map(|c| &c.state).collect::<Vec<_>>()
+                );
             }
             tokio::time::sleep(Duration::from_millis(500)).await;
         }
