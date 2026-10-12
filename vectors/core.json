@@ -1,0 +1,98 @@
+{
+  "commitments": [
+    {
+      "commitment": "8cfa0e55b092114ec1d274d633d317f8dbce497239ae76722c0add142278ff5e",
+      "output_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+      "salt": "2222222222222222222222222222222222222222222222222222222222222222",
+      "worker": "3333333333333333333333333333333333333333333333333333333333333333"
+    }
+  ],
+  "outputs": [
+    {
+      "files": [],
+      "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "files": [
+        [
+          "result.json",
+          "{\"pi\":3.14159}"
+        ]
+      ],
+      "hash": "fbb0b3296f11910c858bad01301f957b1e904ddefce2305de8b6ce8f3720cbef"
+    },
+    {
+      "files": [
+        [
+          "b.txt",
+          "2"
+        ],
+        [
+          "a/z.txt",
+          "1"
+        ],
+        [
+          "a.txt",
+          "0"
+        ]
+      ],
+      "hash": "d26cee66523d155741ef3a408dc9c6e2b3ec694cc3caebfcf12935bb30ac0ac9"
+    }
+  ],
+  "specs": [
+    {
+      "canonical": "{\"cmd\":[\"python\",\"/app/main.py\",\"--samples\",\"1000000\"],\"cpus\":1,\"description\":\"Estimate π\\nwith \\\"quotes\\\" and ünïcode\",\"env\":{\"OMP_NUM_THREADS\":\"1\",\"PYTHONHASHSEED\":\"0\"},\"image\":\"ghcr.io/aralroca/replicata-pi\",\"image_digest\":\"sha256:0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f\",\"inputs\":[{\"path\":\"data/data.csv\",\"sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"url\":\"https://example.org/data.csv\"}],\"mem_mb\":512,\"seed\":42,\"timeout_s\":300,\"title\":\"Monte-Carlo π\",\"version\":1}",
+      "spec": {
+        "cmd": [
+          "python",
+          "/app/main.py",
+          "--samples",
+          "1000000"
+        ],
+        "cpus": 1,
+        "description": "Estimate π\nwith \"quotes\" and ünïcode",
+        "env": {
+          "OMP_NUM_THREADS": "1",
+          "PYTHONHASHSEED": "0"
+        },
+        "image": "ghcr.io/aralroca/replicata-pi",
+        "image_digest": "sha256:0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f",
+        "inputs": [
+          {
+            "path": "data/data.csv",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "url": "https://example.org/data.csv"
+          }
+        ],
+        "mem_mb": 512,
+        "seed": 42,
+        "timeout_s": 300,
+        "title": "Monte-Carlo π",
+        "version": 1
+      },
+      "spec_hash": "9a1a3ba1b0e0638adc91d95a19bad55a4c38d8b15ee2b7637439cc249ad6e24f"
+    },
+    {
+      "canonical": "{\"cmd\":[\"sh\",\"-c\",\"echo 1 > /out/x\"],\"cpus\":16,\"description\":\"\",\"env\":{},\"image\":\"alpine\",\"image_digest\":\"sha256:1212121212121212121212121212121212121212121212121212121212121212\",\"inputs\":[],\"mem_mb\":64,\"seed\":18446744073709551615,\"timeout_s\":1,\"title\":\"t\",\"version\":1}",
+      "spec": {
+        "cmd": [
+          "sh",
+          "-c",
+          "echo 1 > /out/x"
+        ],
+        "cpus": 16,
+        "description": "",
+        "env": {},
+        "image": "alpine",
+        "image_digest": "sha256:1212121212121212121212121212121212121212121212121212121212121212",
+        "inputs": [],
+        "mem_mb": 64,
+        "seed": 18446744073709551615,
+        "timeout_s": 1,
+        "title": "t",
+        "version": 1
+      },
+      "spec_hash": "6261a7d58b2073628c2225c4c4c5c4b11c69156429084b1357ed1237b377b285"
+    }
+  ]
+}
