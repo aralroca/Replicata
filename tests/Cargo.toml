@@ -10,6 +10,7 @@ publish = false
 anchor-lang = "1.2.1"
 replicata = { path = "../programs/replicata", features = ["no-entrypoint"] }
 replicata-core.workspace = true
+replicata-client = { path = "../crates/client" }
 litesvm = "0.18.0"
 litesvm-token = "0.18.0"
 solana-clock = "3.2.1"
@@ -20,7 +21,6 @@ solana-instruction-error = "2.5.0"
 solana-transaction-error = "3.4.0"
 spl-token-interface = "3.0.0"
 solana-program-pack = "3.1.0"
-spl-associated-token-account-interface = "2.0.0"
 
 [dev-dependencies]
 proptest.workspace = true

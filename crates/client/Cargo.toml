@@ -1,0 +1,12 @@
+[package]
+name = "replicata-client"
+version = "0.1.0"
+description = "PDAs, instruction builders and account decoding for the Replicata program"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anchor-lang = "1.2.1"
+replicata = { path = "../../programs/replicata", features = ["no-entrypoint"] }
+spl-associated-token-account-interface = "2.0.0"
+spl-token-interface = "3.0.0"

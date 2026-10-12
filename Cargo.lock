@@ -2356,6 +2356,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "replicata-client"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "replicata",
+ "spl-associated-token-account-interface",
+ "spl-token-interface 3.0.0",
+]
+
+[[package]]
 name = "replicata-core"
 version = "0.1.0"
 dependencies = [
@@ -2379,6 +2389,7 @@ dependencies = [
  "litesvm-token",
  "proptest",
  "replicata",
+ "replicata-client",
  "replicata-core",
  "solana-clock 3.2.1",
  "solana-instruction-error",
@@ -2387,7 +2398,6 @@ dependencies = [
  "solana-signer",
  "solana-transaction",
  "solana-transaction-error",
- "spl-associated-token-account-interface",
  "spl-token-interface 3.0.0",
 ]
 

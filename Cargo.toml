@@ -2,6 +2,7 @@
 members = [
     "programs/replicata",
     "crates/core",
+    "crates/client",
     "tests",
 
 ]

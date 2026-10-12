@@ -1,16 +1,16 @@
 //! LiteSVM harness for the Replicata program.
 //!
 //! Anchor 1.2 and LiteSVM 0.18 share the same `solana-address`/`solana-instruction` types
-//! (semver trick), so Anchor-built instructions are sent to LiteSVM directly.
+//! (semver trick), so instructions built by `replicata-client` are sent to LiteSVM directly
+//! — every test here also exercises the client used by the coordinator and the worker.
 
 use anchor_lang::prelude::Pubkey;
 use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
-use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
 use litesvm::types::FailedTransactionMetadata;
 use litesvm::LiteSVM;
 use litesvm_token::{CreateAssociatedTokenAccount, CreateMint, MintTo};
-use replicata::state::{Claim, Experiment, WorkerProfile};
-use replicata::CreateExperimentArgs;
+use replicata_client as client;
+use replicata_client::{Claim, CreateExperimentArgs, Experiment, WorkerProfile};
 use solana_clock::Clock;
 use solana_instruction_error::InstructionError;
 use solana_keypair::Keypair;
@@ -18,9 +18,9 @@ use solana_program_pack::Pack;
 use solana_signer::Signer;
 use solana_transaction::Transaction;
 use solana_transaction_error::TransactionError;
-use spl_associated_token_account_interface::address::get_associated_token_address;
 
 pub use replicata::error::ReplicataError;
+pub use replicata_client::{claim_pda, experiment_pda, profile_pda};
 
 pub const START: i64 = 1_700_000_000;
 pub const USDC: u64 = 1_000_000;
@@ -92,7 +92,7 @@ impl Default for Env {
 impl Env {
     pub fn new() -> Self {
         let mut svm = LiteSVM::new();
-        svm.add_program_from_file(replicata::ID, PROGRAM_SO)
+        svm.add_program_from_file(client::PROGRAM_ID, PROGRAM_SO)
             .expect("target/deploy/replicata.so missing: run `anchor build` first");
         let mint_authority = Keypair::new();
         svm.airdrop(&mint_authority.pubkey(), 100_000_000_000).unwrap();
@@ -137,7 +137,7 @@ impl Env {
     }
 
     pub fn ata(&self, owner: &Pubkey) -> Pubkey {
-        get_associated_token_address(owner, &self.mint)
+        client::ata(owner, &self.mint)
     }
 
     pub fn balance(&self, owner: &Pubkey) -> u64 {
@@ -165,20 +165,16 @@ impl Env {
     }
 
     pub fn send(&mut self, ix: Instruction, signers: &[&Keypair]) -> TxResult {
-        self.send_many(&[ix], signers)
-    }
-
-    pub fn send_many(&mut self, ixs: &[Instruction], signers: &[&Keypair]) -> TxResult {
         self.svm.expire_blockhash();
-        let tx = Transaction::new_signed_with_payer(ixs, Some(&signers[0].pubkey()), signers, self.svm.latest_blockhash());
+        let tx = Transaction::new_signed_with_payer(&[ix], Some(&signers[0].pubkey()), signers, self.svm.latest_blockhash());
 
         self.svm.send_transaction(tx).map(|_| ())
     }
 
-    fn read<T: AccountDeserialize>(&self, key: &Pubkey) -> T {
+    fn read<T: anchor_lang::AccountDeserialize>(&self, key: &Pubkey) -> T {
         let account = self.svm.get_account(key).expect("account exists");
 
-        T::try_deserialize(&mut account.data.as_slice()).unwrap()
+        client::decode(&account.data).expect("decodes")
     }
 
     pub fn experiment(&self, key: &Pubkey) -> Experiment {
@@ -216,25 +212,9 @@ impl Env {
         }
     }
 
-    pub fn create_ix(&self, authority: &Pubkey, args: CreateExperimentArgs) -> (Pubkey, Instruction) {
-        let experiment = experiment_pda(authority, args.nonce);
-        let accounts = replicata::accounts::CreateExperiment {
-            authority: *authority,
-            experiment,
-            mint: self.mint,
-            vault: self.ata(&experiment),
-            authority_token_account: self.ata(authority),
-            token_program: spl_token_interface::ID,
-            associated_token_program: spl_associated_token_account_interface::program::ID,
-            system_program: anchor_lang::system_program::ID,
-        };
-
-        (experiment, ix(accounts, replicata::instruction::CreateExperiment { args }))
-    }
-
     pub fn try_create(&mut self, params: &Params) -> Result<Pubkey, FailedTransactionMetadata> {
         let args = self.create_args(params);
-        let (experiment, ix) = self.create_ix(&self.author.pubkey(), args);
+        let (experiment, ix) = client::create_experiment(&self.author.pubkey(), &self.mint, args);
         let author = self.author.insecure_clone();
 
         self.send(ix, &[&author]).map(|_| experiment)
@@ -245,43 +225,23 @@ impl Env {
     }
 
     pub fn cancel(&mut self, experiment: &Pubkey) -> TxResult {
-        let accounts = replicata::accounts::CancelExperiment {
-            authority: self.author.pubkey(),
-            experiment: *experiment,
-            mint: self.mint,
-            vault: self.vault(experiment),
-            authority_token_account: self.ata(&self.author.pubkey()),
-            token_program: spl_token_interface::ID,
-        };
+        let mut ix = client::cancel_experiment(experiment, &self.experiment(experiment));
+        // Let tests impersonate the author: sign and pay with `self.author`.
+        ix.accounts[0].pubkey = self.author.pubkey();
+        ix.accounts[4].pubkey = self.ata(&self.author.pubkey());
         let author = self.author.insecure_clone();
 
-        self.send(ix(accounts, replicata::instruction::CancelExperiment {}), &[&author])
+        self.send(ix, &[&author])
     }
 
     pub fn claim(&mut self, experiment: &Pubkey, worker: &Keypair) -> TxResult {
-        let accounts = replicata::accounts::ClaimExperiment {
-            worker: worker.pubkey(),
-            experiment: *experiment,
-            claim: claim_pda(experiment, &worker.pubkey()),
-            worker_profile: profile_pda(&worker.pubkey()),
-            mint: self.mint,
-            vault: self.vault(experiment),
-            worker_token_account: self.ata(&worker.pubkey()),
-            token_program: spl_token_interface::ID,
-            system_program: anchor_lang::system_program::ID,
-        };
+        let ix = client::claim(&worker.pubkey(), experiment, &self.experiment(experiment));
 
-        self.send(ix(accounts, replicata::instruction::Claim {}), &[worker])
+        self.send(ix, &[worker])
     }
 
     pub fn commit_raw(&mut self, experiment: &Pubkey, worker: &Keypair, commitment: [u8; 32]) -> TxResult {
-        let accounts = replicata::accounts::CommitResult {
-            worker: worker.pubkey(),
-            experiment: *experiment,
-            claim: claim_pda(experiment, &worker.pubkey()),
-        };
-
-        self.send(ix(accounts, replicata::instruction::Commit { commitment }), &[worker])
+        self.send(client::commit(&worker.pubkey(), experiment, commitment), &[worker])
     }
 
     /// Commits `hash` with a salt derived from the worker key (tests reuse it in `reveal`).
@@ -292,13 +252,7 @@ impl Env {
     }
 
     pub fn reveal_raw(&mut self, experiment: &Pubkey, worker: &Keypair, output_hash: [u8; 32], salt: [u8; 32]) -> TxResult {
-        let accounts = replicata::accounts::RevealResult {
-            worker: worker.pubkey(),
-            experiment: *experiment,
-            claim: claim_pda(experiment, &worker.pubkey()),
-        };
-
-        self.send(ix(accounts, replicata::instruction::Reveal { output_hash, salt }), &[worker])
+        self.send(client::reveal(&worker.pubkey(), experiment, output_hash, salt), &[worker])
     }
 
     pub fn reveal(&mut self, experiment: &Pubkey, worker: &Keypair, hash: [u8; 32]) -> TxResult {
@@ -307,85 +261,52 @@ impl Env {
 
     /// `[claim, token account, profile]` for each worker, as `finalize` expects.
     pub fn finalize_remaining(&self, experiment: &Pubkey, workers: &[Pubkey]) -> Vec<AccountMeta> {
-        workers
-            .iter()
-            .flat_map(|w| {
-                [
-                    AccountMeta::new(claim_pda(experiment, w), false),
-                    AccountMeta::new(self.ata(w), false),
-                    AccountMeta::new(profile_pda(w), false),
-                ]
-            })
-            .collect()
+        client::finalize(experiment, &self.experiment(experiment), workers).accounts.split_off(5)
     }
 
     pub fn finalize_ix(&self, experiment: &Pubkey, remaining: Vec<AccountMeta>, authority_token_account: Pubkey) -> Instruction {
-        let accounts = replicata::accounts::Finalize {
-            experiment: *experiment,
-            mint: self.mint,
-            vault: self.vault(experiment),
-            authority_token_account,
-            token_program: spl_token_interface::ID,
-        };
-        let mut instruction = ix(accounts, replicata::instruction::Finalize {});
+        let mut ix = client::finalize(experiment, &self.experiment(experiment), &[]);
 
-        instruction.accounts.extend(remaining);
-        instruction
+        ix.accounts[3].pubkey = authority_token_account;
+        ix.accounts.extend(remaining);
+        ix
     }
 
     pub fn finalize_with(&mut self, experiment: &Pubkey, remaining: Vec<AccountMeta>, payer: &Keypair) -> TxResult {
         let author_ata = self.ata(&self.experiment(experiment).authority);
-        let instruction = self.finalize_ix(experiment, remaining, author_ata);
+        let ix = self.finalize_ix(experiment, remaining, author_ata);
 
-        self.send(instruction, &[payer])
+        self.send(ix, &[payer])
     }
 
     /// Finalizes passing every revealed claim (the honest crank behaviour).
     pub fn finalize(&mut self, experiment: &Pubkey, revealed: &[Pubkey]) -> TxResult {
-        let remaining = self.finalize_remaining(experiment, revealed);
+        let ix = client::finalize(experiment, &self.experiment(experiment), revealed);
         let cranker = self.user(0);
 
-        self.finalize_with(experiment, remaining, &cranker)
+        self.send(ix, &[&cranker])
     }
 
     pub fn claim_royalties_with(&mut self, experiment: &Pubkey, remaining: Vec<AccountMeta>) -> TxResult {
-        let exp = self.experiment(experiment);
-        let accounts = replicata::accounts::ClaimRoyalties {
-            experiment: *experiment,
-            mint: self.mint,
-            vault: self.vault(experiment),
-            authority_token_account: self.ata(&exp.authority),
-            token_program: spl_token_interface::ID,
-        };
-        let mut instruction = ix(accounts, replicata::instruction::ClaimRoyalties {});
-        instruction.accounts.extend(remaining);
+        let mut ix = client::claim_royalties(experiment, &self.experiment(experiment));
+        ix.accounts.truncate(5);
+        ix.accounts.extend(remaining);
         let cranker = self.user(0);
 
-        self.send(instruction, &[&cranker])
+        self.send(ix, &[&cranker])
     }
 
     pub fn claim_royalties(&mut self, experiment: &Pubkey) -> TxResult {
-        let exp = self.experiment(experiment);
-        let remaining = exp.replicators[..exp.agree_count as usize]
-            .iter()
-            .map(|w| AccountMeta::new(self.ata(w), false))
-            .collect();
+        let ix = client::claim_royalties(experiment, &self.experiment(experiment));
+        let cranker = self.user(0);
 
-        self.claim_royalties_with(experiment, remaining)
+        self.send(ix, &[&cranker])
     }
 
     pub fn withdraw_bond(&mut self, experiment: &Pubkey, worker: &Keypair) -> TxResult {
-        let accounts = replicata::accounts::WithdrawBond {
-            worker: worker.pubkey(),
-            experiment: *experiment,
-            claim: claim_pda(experiment, &worker.pubkey()),
-            mint: self.mint,
-            vault: self.vault(experiment),
-            worker_token_account: self.ata(&worker.pubkey()),
-            token_program: spl_token_interface::ID,
-        };
+        let ix = client::withdraw_bond(&worker.pubkey(), experiment, &self.experiment(experiment));
 
-        self.send(ix(accounts, replicata::instruction::WithdrawBond {}), &[worker])
+        self.send(ix, &[worker])
     }
 
     /// Creates an experiment, funds `n` workers and has them all claim it.
@@ -398,27 +319,11 @@ impl Env {
     }
 }
 
-fn ix(accounts: impl ToAccountMetas, data: impl InstructionData) -> Instruction {
-    Instruction { program_id: replicata::ID, accounts: accounts.to_account_metas(None), data: data.data() }
-}
-
 pub fn salt_of(worker: &Keypair) -> [u8; 32] {
     let mut salt = worker.pubkey().to_bytes();
 
     salt.reverse();
     salt
-}
-
-pub fn experiment_pda(authority: &Pubkey, nonce: u64) -> Pubkey {
-    Pubkey::find_program_address(&[replicata::EXPERIMENT_SEED, authority.as_ref(), &nonce.to_le_bytes()], &replicata::ID).0
-}
-
-pub fn claim_pda(experiment: &Pubkey, worker: &Pubkey) -> Pubkey {
-    Pubkey::find_program_address(&[replicata::CLAIM_SEED, experiment.as_ref(), worker.as_ref()], &replicata::ID).0
-}
-
-pub fn profile_pda(worker: &Pubkey) -> Pubkey {
-    Pubkey::find_program_address(&[replicata::WORKER_SEED, worker.as_ref()], &replicata::ID).0
 }
 
 pub fn pubkeys(workers: &[Keypair]) -> Vec<Pubkey> {
