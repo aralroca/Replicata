@@ -10,12 +10,12 @@ use std::time::Duration;
 
 use anyhow::Context;
 use replicata_client::{ClaimState, Pubkey};
-use replicata_core::{bundle, commitment, from_hex, hash_dir, to_hex, JobSpec};
+use replicata_core::hash::read_dir_files;
+use replicata_core::{bundle, commitment, from_hex, hash_files, to_hex, JobSpec};
 use reqwest_middleware::ClientWithMiddleware;
 
 use crate::api::{Coordinator, ExperimentView};
 use crate::chain::Chain;
-use crate::inputs::InputMismatch;
 use crate::state::{Job, Stage, State};
 use crate::{inputs, sandbox};
 
@@ -30,24 +30,13 @@ pub struct Worker {
     pub exit_after: Option<Stage>,
 }
 
-/// A failure that would happen again on retry (bad spec, non-zero exit, timeout...).
-#[derive(Debug)]
+/// A failure that would happen again on retry (bad spec or inputs, non-zero exit, timeout...).
+#[derive(Debug, thiserror::Error)]
+#[error("{0}")]
 pub struct Deterministic(pub String);
 
-impl std::fmt::Display for Deterministic {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
-impl std::error::Error for Deterministic {}
-
-fn deterministic(msg: impl Into<String>) -> anyhow::Error {
+pub fn deterministic(msg: impl Into<String>) -> anyhow::Error {
     Deterministic(msg.into()).into()
-}
-
-fn is_deterministic(err: &anyhow::Error) -> bool {
-    err.is::<Deterministic>() || err.is::<InputMismatch>()
 }
 
 pub fn log(id: &str, msg: impl AsRef<str>) {
@@ -74,15 +63,15 @@ impl Worker {
     pub async fn process(&self, id: &str) -> anyhow::Result<Stage> {
         let key: Pubkey = id.parse()?;
         let mut job = State::load(&self.state_path())?.jobs.get(id).cloned();
-        let open = self.api.experiment(id).await?.status == "open";
-        if !open {
+        let view = self.api.experiment(id).await?;
+        if view.status != "open" {
             return job.map(|j| j.stage).context("the experiment is no longer open");
         }
 
         loop {
             let next = match &job {
-                None => self.claim(id, &key).await?,
-                Some(j) if j.stage == Stage::Claimed => self.execute(id, j).await?,
+                None => self.claim(id, &key, &view).await?,
+                Some(j) if j.stage == Stage::Claimed => self.execute(id, &view, j).await?,
                 Some(j) if j.stage == Stage::Executed => self.commit(id, &key, j).await?,
                 Some(j) if j.stage == Stage::Committed => self.upload(id, j).await?,
                 Some(j) if j.stage == Stage::Uploaded => self.reveal(id, &key, j).await?,
@@ -97,19 +86,18 @@ impl Worker {
         }
     }
 
-    async fn claim(&self, id: &str, key: &Pubkey) -> anyhow::Result<Job> {
+    async fn claim(&self, id: &str, key: &Pubkey, view: &ExperimentView) -> anyhow::Result<Job> {
         if self.chain.my_claim(key).await?.is_none() {
-            let view = self.api.experiment(id).await?;
             self.chain.ensure_token_account().await?;
             let sig = self.chain.claim(key).await.context("claim failed")?;
             log(id, format!("claimed (bond {}) tx {sig}", replicata_core::net::format_usdc(view.bond)));
         }
-        Ok(Job { stage: Stage::Claimed, salt: None, output_hash: None, bundle: None, error: None })
+        Ok(Job::new(Stage::Claimed))
     }
 
     /// `Failed` for deterministic failures; transient ones propagate (the job stays `Claimed`).
-    async fn execute(&self, id: &str, job: &Job) -> anyhow::Result<Job> {
-        match self.try_execute(id).await {
+    async fn execute(&self, id: &str, view: &ExperimentView, job: &Job) -> anyhow::Result<Job> {
+        match self.try_execute(id, view).await {
             Ok((hash, bundle)) => Ok(Job {
                 stage: Stage::Executed,
                 salt: Some(hex::encode(rand::random::<[u8; 32]>())),
@@ -117,7 +105,7 @@ impl Worker {
                 bundle: Some(bundle),
                 error: None,
             }),
-            Err(err) if is_deterministic(&err) => {
+            Err(err) if err.is::<Deterministic>() => {
                 log(id, format!("execution failed: {err:#}"));
                 Ok(Job { stage: Stage::Failed, error: Some(format!("{err:#}")), ..job.clone() })
             }
@@ -125,10 +113,9 @@ impl Worker {
         }
     }
 
-    async fn try_execute(&self, id: &str) -> anyhow::Result<([u8; 32], PathBuf)> {
-        let view = self.api.experiment(id).await?;
+    async fn try_execute(&self, id: &str, view: &ExperimentView) -> anyhow::Result<([u8; 32], PathBuf)> {
         let spec = view.spec.clone().context("the coordinator has no spec for this experiment yet")?;
-        verify_spec(&view, &spec).map_err(|e| deterministic(format!("{e:#}")))?;
+        verify_spec(view, &spec).map_err(|e| deterministic(format!("{e:#}")))?;
         let dir = self.work_dir(id);
         let (inputs_dir, out) = (dir.join("inputs"), dir.join("out"));
         let _ = std::fs::remove_dir_all(&dir);
@@ -146,7 +133,9 @@ impl Worker {
         if self.chaos {
             std::fs::write(out.join("chaos.txt"), rand::random::<[u8; 16]>())?;
         }
-        package(&out, &dir).map_err(|e| deterministic(format!("invalid output: {e:#}")))
+        tokio::task::spawn_blocking(move || package(&out, &dir))
+            .await?
+            .map_err(|e| deterministic(format!("invalid output: {e:#}")))
     }
 
     async fn commit(&self, id: &str, key: &Pubkey, job: &Job) -> anyhow::Result<Job> {
@@ -195,12 +184,9 @@ impl Worker {
     /// Recovers the bond of an unresolved experiment nobody revealed.
     pub async fn withdraw(&self, id: &str) -> anyhow::Result<Stage> {
         let sig = self.chain.withdraw_bond(&id.parse()?).await?;
-        let job = State::load(&self.state_path())?.jobs.get(id).cloned();
-        let withdrawn = Job {
-            stage: Stage::Withdrawn,
-            ..job.unwrap_or(Job { stage: Stage::Withdrawn, salt: None, output_hash: None, bundle: None, error: None })
-        };
-        self.save(id, &withdrawn)?;
+        let mut job = State::load(&self.state_path())?.jobs.remove(id).unwrap_or_else(|| Job::new(Stage::Withdrawn));
+        job.stage = Stage::Withdrawn;
+        self.save(id, &job)?;
         log(id, format!("bond withdrawn tx {sig}"));
 
         Ok(Stage::Withdrawn)
@@ -215,11 +201,14 @@ fn verify_spec(view: &ExperimentView, spec: &JobSpec) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Reads the output once, then hashes and packs those same bytes.
 fn package(out: &Path, dir: &Path) -> anyhow::Result<([u8; 32], PathBuf)> {
-    let hash = hash_dir(out)?;
+    let mut files = read_dir_files(out)?;
+    files.sort_by(|a, b| a.0.as_bytes().cmp(b.0.as_bytes()));
+    let hash = hash_files(files.iter().map(|(n, b)| (n.as_str(), b.as_slice())))?;
     let path = dir.join("bundle.tar.gz");
-    std::fs::write(&path, bundle::pack_dir(out)?)?;
 
+    std::fs::write(&path, bundle::pack_files(&files)?)?;
     Ok((hash, path))
 }
 

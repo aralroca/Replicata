@@ -14,9 +14,16 @@ export function useExperiments(query = "") {
   return useSWR(["experiments", query], () => api.experiments(query), { refreshInterval: 5_000 });
 }
 
-/** Polls the experiment every 3 s so the timeline moves on its own. */
+/** 3 s while the timeline can move; settled experiments only change on royalties. */
+function experimentRefresh(experiment?: { phase: string }) {
+  return experiment?.phase === "settled" ? 30_000 : 3_000;
+}
+
+/** Polls the experiment so the timeline moves on its own. */
 export function useExperiment(id: string) {
-  return useSWR(["experiment", id], () => api.experiment(id), LIVE);
+  return useSWR(["experiment", id], () => api.experiment(id), {
+    refreshInterval: experimentRefresh,
+  });
 }
 
 export function useWorker(pubkey: string) {

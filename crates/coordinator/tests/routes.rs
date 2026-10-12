@@ -113,7 +113,7 @@ async fn fixture(facilitator: &str) -> Fixture {
     let state = AppState {
         cfg: Arc::new(config(facilitator)),
         db,
-        snapshot: Arc::new(RwLock::new(snapshot)),
+        snapshot: Arc::new(RwLock::new(Arc::new(snapshot))),
         rpc: Arc::new(RpcClient::new("http://127.0.0.1:1".into())),
         refresh: Arc::new(Notify::new()),
     };
@@ -193,7 +193,7 @@ async fn config_and_openapi() {
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(config["network"], NETWORK);
-    assert_eq!(config["program_id"], replicata_core::net::PROGRAM_ID);
+    assert_eq!(config["program_id"], replicata_client::PROGRAM_ID.to_string());
     let (status, openapi) = get(&f.app, "/openapi.json").await;
     assert_eq!(status, StatusCode::OK);
     assert!(openapi["paths"]["/v1/experiments/{id}/result"].is_object());

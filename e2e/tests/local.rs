@@ -50,15 +50,11 @@ async fn happy_path_replicates_pays_workers_and_sells_the_result() {
     assert_eq!(ctx.balance(&consumer.pubkey()).await, USDC - 10_000);
 
     // The crank distributes the access payment: 70% author, 10% per replicator.
-    ctx.wait_for(&id, WAIT, |v| v.claims.len() == 3 && v.status == "replicated" && royalties_paid(v) == 10_000).await;
+    ctx.wait_for(&id, WAIT, |v| v.claims.len() == 3 && v.status == "replicated" && v.royalties_paid == 10_000).await;
     assert_eq!(ctx.balance(&author.pubkey()).await, author_start - 3 * USDC + 7_000);
     for w in &workers {
         assert_eq!(ctx.balance(&w.pubkey()).await, 11 * USDC + 1_000);
     }
-}
-
-fn royalties_paid(view: &replicata_worker::api::ExperimentView) -> u64 {
-    view.royalties_paid
 }
 
 #[tokio::test]

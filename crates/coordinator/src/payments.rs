@@ -8,7 +8,6 @@ use axum::extract::{Request, State};
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 use base64::Engine;
 use replicata_client::Pubkey;
 use serde_json::{json, Value};
@@ -21,6 +20,7 @@ use x402_types::proto::SettleResponse;
 
 use crate::config::Config;
 use crate::db;
+use crate::error::ApiError;
 use crate::state::AppState;
 
 pub const PAYMENT_HEADER: &str = "payment-signature";
@@ -62,13 +62,9 @@ pub async fn replay_guard(State(state): State<AppState>, req: Request, next: Nex
     };
 
     match db::payment_exists(&state.db, &hash).await {
-        Ok(true) => (
-            StatusCode::CONFLICT,
-            Json(json!({ "error": "payment_replayed", "message": "this payment was already used" })),
-        )
-            .into_response(),
+        Ok(true) => ApiError::conflict("payment_replayed", "this payment was already used").into_response(),
         Ok(false) => next.run(req).await,
-        Err(err) => crate::error::ApiError::from(err).into_response(),
+        Err(err) => ApiError::from(err).into_response(),
     }
 }
 
@@ -129,13 +125,23 @@ fn payment_required_error(headers: &HeaderMap) -> Option<String> {
     value.get("error").and_then(Value::as_str).map(str::to_string)
 }
 
-fn failure_body(failure: &Failure, message: &str, faucet: &str) -> Value {
-    match failure {
-        Failure::InsufficientFunds => json!({ "error": "insufficient_funds", "message": message, "faucet": faucet }),
-        Failure::FacilitatorUnavailable => json!({ "error": "facilitator_unavailable", "message": message }),
-        Failure::SettlementFailed => json!({ "error": "settlement_failed", "message": message }),
-        Failure::PaymentRequired => json!({ "error": "payment_required", "message": message }),
+impl Failure {
+    fn code(&self) -> &'static str {
+        match self {
+            Failure::InsufficientFunds => "insufficient_funds",
+            Failure::FacilitatorUnavailable => "facilitator_unavailable",
+            Failure::SettlementFailed => "settlement_failed",
+            Failure::PaymentRequired => "payment_required",
+        }
     }
+}
+
+fn failure_body(failure: &Failure, message: &str, faucet: &str) -> Value {
+    let mut body = json!({ "error": failure.code(), "message": message });
+    if *failure == Failure::InsufficientFunds {
+        body["faucet"] = faucet.into();
+    }
+    body
 }
 
 /// `(source token account, amount)` of the `transfer_checked` inside an x402 payment header.

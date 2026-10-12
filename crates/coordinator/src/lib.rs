@@ -26,7 +26,7 @@ pub use state::AppState;
 pub async fn build_state(cfg: Config) -> anyhow::Result<AppState> {
     let db = db::connect(&cfg.database_url).await?;
     let rpc = Arc::new(RpcClient::new_with_commitment(cfg.rpc_url.clone(), CommitmentConfig::confirmed()));
-    let snapshot = Arc::new(RwLock::new(snapshot::fetch(&rpc).await?));
+    let snapshot = Arc::new(RwLock::new(Arc::new(snapshot::fetch(&rpc).await?)));
 
     Ok(AppState { cfg: Arc::new(cfg), db, snapshot, rpc, refresh: Arc::new(Notify::new()) })
 }

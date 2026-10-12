@@ -1,10 +1,12 @@
 // Step 2 of the publish wizard: replication & payment parameters. Mirrors the program's checks
 // (`ZeroReward`, `InvalidReplicationParams`, `InvalidAuthorShare`, `InvalidDeadlines`).
-import { parseAmount } from "@/lib/amounts";
+import { BPS_DENOMINATOR, MAX_CLAIMS } from "@/generated";
+import { parseAmount, USDC_DECIMALS } from "@/lib/amounts";
 import type { SpecIssue } from "@/lib/spec/validate";
 import type { Economics } from "@/lib/tx/create-experiment";
 
-export const MAX_CLAIMS = 5;
+// The program's own limits (generated from the IDL), so UI validation cannot drift from it.
+export { MAX_CLAIMS };
 
 export type EconomicsForm = {
   k: string;
@@ -30,7 +32,7 @@ export const DEFAULT_ECONOMICS_FORM: EconomicsForm = {
 
 const int = (text: string) => (/^\d+$/.test(text.trim()) ? Number(text.trim()) : NaN);
 
-export function toEconomics(form: EconomicsForm, decimals = 6): Economics {
+export function toEconomics(form: EconomicsForm, decimals = USDC_DECIMALS): Economics {
   return {
     reward: parseAmount(form.reward, decimals) ?? -1n,
     bond: parseAmount(form.bond, decimals) ?? -1n,
@@ -64,11 +66,11 @@ const RULES: { field: keyof EconomicsForm; message: string; ok: (e: Economics) =
   {
     field: "authorSharePct",
     message: "Author share must be between 0% and 100%",
-    ok: (e) => Number.isInteger(e.authorShareBps) && e.authorShareBps >= 0 && e.authorShareBps <= 10_000,
+    ok: (e) => Number.isInteger(e.authorShareBps) && e.authorShareBps >= 0 && e.authorShareBps <= BPS_DENOMINATOR,
   },
 ];
 
-export function economicsIssues(form: EconomicsForm, decimals = 6): SpecIssue[] {
+export function economicsIssues(form: EconomicsForm, decimals = USDC_DECIMALS): SpecIssue[] {
   const economics = toEconomics(form, decimals);
 
   return RULES.filter((rule) => !rule.ok(economics)).map(({ field, message }) => ({

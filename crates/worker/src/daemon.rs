@@ -38,18 +38,16 @@ async fn todo(worker: &Worker, state: &State) -> Vec<String> {
 }
 
 /// Unrevealed jobs of experiments that ended `unresolved` with no reveal at all.
+/// One coordinator call per tick, intersected with the local jobs.
 async fn refundable(worker: &Worker, state: &State) -> Vec<String> {
-    let mut ids = Vec::new();
-    for (id, job) in &state.jobs {
-        if !(job.stage.in_progress() || job.stage == Stage::Failed) {
-            continue;
-        }
-        let view = worker.api.experiment(id).await;
-        if view.is_ok_and(|v| v.status == "unresolved" && v.reveals_count == 0) {
-            ids.push(id.clone());
-        }
-    }
-    ids
+    let unresolved = worker.api.experiments("status=unresolved&limit=200").await.unwrap_or_default();
+
+    unresolved
+        .into_iter()
+        .filter(|e| e.reveals_count == 0)
+        .filter(|e| state.jobs.get(&e.id).is_some_and(|j| j.stage.in_progress() || j.stage == Stage::Failed))
+        .map(|e| e.id)
+        .collect()
 }
 
 pub async fn run_forever(worker: Arc<Worker>, every: Duration) {

@@ -85,25 +85,9 @@ pub fn handle_finalize<'info>(ctx: Context<'info, Finalize<'info>>) -> Result<()
     let quorum = experiment.reveals_count >= experiment.k && (agree as u16) * 2 > experiment.reveals_count as u16;
 
     if quorum {
-        settle_replicated(
-            &mut ctx.accounts.experiment,
-            &ctx.accounts.vault,
-            &ctx.accounts.mint,
-            &ctx.accounts.token_program,
-            &ctx.accounts.authority_token_account,
-            &mut revealed,
-            hash,
-            agree,
-        )?;
+        settle_replicated(ctx.accounts, &mut revealed, hash, agree)?;
     } else {
-        settle_unresolved(
-            &mut ctx.accounts.experiment,
-            &ctx.accounts.vault,
-            &ctx.accounts.mint,
-            &ctx.accounts.token_program,
-            &ctx.accounts.authority_token_account,
-            &mut revealed,
-        )?;
+        settle_unresolved(ctx.accounts, &mut revealed)?;
     }
     revealed.iter().try_for_each(|r| {
         r.claim.exit(&crate::ID)?;
@@ -114,24 +98,20 @@ pub fn handle_finalize<'info>(ctx: Context<'info, Finalize<'info>>) -> Result<()
 /// Agreeing workers get their bond back plus an equal share of
 /// `reward + every other bond` (disagreeing and unrevealed bonds are confiscated).
 /// The indivisible remainder goes back to the author.
-#[allow(clippy::too_many_arguments)]
 fn settle_replicated<'info>(
-    experiment: &mut Account<'info, Experiment>,
-    vault: &InterfaceAccount<'info, TokenAccount>,
-    mint: &InterfaceAccount<'info, Mint>,
-    token_program: &Interface<'info, TokenInterface>,
-    author: &InterfaceAccount<'info, TokenAccount>,
+    accounts: &mut Finalize<'info>,
     revealed: &mut [Revealed<'info>],
     hash: [u8; 32],
     agree: u8,
 ) -> Result<()> {
+    let experiment = &accounts.experiment;
     let bond = experiment.bond;
     let returned_bonds = bond.checked_mul(agree as u64).ok_or(ReplicataError::Overflow)?;
     let distributable = experiment.escrowed.checked_sub(returned_bonds).ok_or(ReplicataError::Overflow)?;
     let share = distributable / agree as u64;
     let dust = distributable % agree as u64;
-    let token_program = token_program.to_account_info();
-    let payer = Vault { experiment, vault, mint, token_program: &token_program };
+    let token_program = accounts.token_program.to_account_info();
+    let payer = Vault { experiment, vault: &accounts.vault, mint: &accounts.mint, token_program: &token_program };
     let mut replicators = experiment.replicators;
     let mut slot = 0usize;
 
@@ -148,8 +128,9 @@ fn settle_replicated<'info>(
         replicators[slot] = r.claim.worker;
         slot += 1;
     }
-    payer.pay(&author.to_account_info(), dust)?;
+    payer.pay(&accounts.authority_token_account.to_account_info(), dust)?;
 
+    let experiment = &mut accounts.experiment;
     experiment.replicators = replicators;
     experiment.result_hash = hash;
     experiment.agree_count = agree;
@@ -163,16 +144,10 @@ fn settle_replicated<'info>(
 /// If at least one worker revealed, the experiment was runnable, so claims that never revealed
 /// forfeit their bond to the workers who did (otherwise withholding a reveal would be a free
 /// veto that forces `Unresolved`). If nobody revealed, bonds stay escrowed for `withdraw_bond`.
-fn settle_unresolved<'info>(
-    experiment: &mut Account<'info, Experiment>,
-    vault: &InterfaceAccount<'info, TokenAccount>,
-    mint: &InterfaceAccount<'info, Mint>,
-    token_program: &Interface<'info, TokenInterface>,
-    author: &InterfaceAccount<'info, TokenAccount>,
-    revealed: &mut [Revealed<'info>],
-) -> Result<()> {
-    let token_program = token_program.to_account_info();
-    let payer = Vault { experiment, vault, mint, token_program: &token_program };
+fn settle_unresolved<'info>(accounts: &mut Finalize<'info>, revealed: &mut [Revealed<'info>]) -> Result<()> {
+    let experiment = &accounts.experiment;
+    let token_program = accounts.token_program.to_account_info();
+    let payer = Vault { experiment, vault: &accounts.vault, mint: &accounts.mint, token_program: &token_program };
     let bond = experiment.bond;
     let reward = experiment.reward;
 
@@ -184,12 +159,13 @@ fn settle_unresolved<'info>(
     let share = forfeited.checked_div(revealed.len() as u64).unwrap_or(0);
     let dust = forfeited - share * revealed.len() as u64;
 
-    payer.pay(&author.to_account_info(), reward + dust)?;
+    payer.pay(&accounts.authority_token_account.to_account_info(), reward + dust)?;
     for r in revealed.iter_mut() {
         payer.pay(r.token_account, bond + share)?;
         r.claim.state = ClaimState::Refunded;
     }
     let settled = reward + revealed_bonds + forfeited;
+    let experiment = &mut accounts.experiment;
 
     experiment.escrowed = experiment.escrowed.checked_sub(settled).ok_or(ReplicataError::Overflow)?;
     experiment.status = ExperimentStatus::Unresolved;

@@ -8,7 +8,6 @@ use solana_signer::Signer;
 #[derive(Deserialize, Debug, Clone)]
 pub struct RemoteConfig {
     pub cluster: String,
-    pub network: String,
     pub rpc_url: String,
     pub mint: String,
     pub faucets: Faucets,
@@ -33,9 +32,7 @@ pub struct ExperimentView {
     pub phase: String,
     pub spec_hash: String,
     pub bond: u64,
-    pub reward: u64,
     pub reveals_count: u8,
-    pub k: u8,
     pub max_claims: u8,
     pub claims_count: u8,
     pub spec: Option<JobSpec>,
@@ -58,11 +55,14 @@ pub struct Coordinator {
 }
 
 async fn ok_json<T: serde::de::DeserializeOwned>(response: reqwest::Response) -> anyhow::Result<T> {
-    let status = response.status();
-    if !status.is_success() {
-        anyhow::bail!("coordinator returned {status}: {}", response.text().await.unwrap_or_default());
-    }
-    Ok(response.json().await?)
+    Ok(crate::pay::check(response).await?.json().await?)
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct WorkerProfile {
+    pub ok: u32,
+    pub bad: u32,
+    pub earned: u64,
 }
 
 impl Coordinator {
@@ -76,6 +76,10 @@ impl Coordinator {
 
     pub async fn experiments(&self, query: &str) -> anyhow::Result<Vec<ExperimentView>> {
         ok_json(self.http.get(format!("{}/v1/experiments?{query}", self.base)).send().await?).await
+    }
+
+    pub async fn worker(&self, pubkey: &str) -> anyhow::Result<WorkerProfile> {
+        ok_json(self.http.get(format!("{}/v1/workers/{pubkey}", self.base)).send().await?).await
     }
 
     pub async fn experiment(&self, id: &str) -> anyhow::Result<ExperimentView> {

@@ -25,12 +25,8 @@ solana-keypair = "3.1.2"
 solana-signature = { version = "3.5.2", features = ["verify"] }
 solana-signer = "3.0.1"
 solana-transaction = "3.1.0"
-solana-rpc-client-api = "3.1.14"
-solana-account-decoder-client-types = "3.1.14"
 sqlx = { version = "0.9.0", default-features = false, features = ["postgres", "runtime-tokio", "tls-rustls-ring-webpki", "migrate", "macros"] }
-thiserror.workspace = true
 tokio = { version = "1.53.2", features = ["full"] }
-tower = "0.5.3"
 tower-http = { version = "0.7.1", features = ["cors", "trace", "limit"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
@@ -42,5 +38,6 @@ x402-chain-solana = { version = "2.0.2", features = ["server"] }
 x402-types = "2.0.2"
 
 [dev-dependencies]
+tower = "0.5.3"
 tempfile.workspace = true
 wiremock = "0.6.5"

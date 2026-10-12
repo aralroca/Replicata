@@ -36,7 +36,7 @@ fn paid_routes(state: &AppState) -> Router<AppState> {
             async move {
                 let id = paid::experiment_id(&path).and_then(|id| id.parse::<Pubkey>().ok());
                 let price = match id {
-                    Some(id) => state.snapshot.read().await.experiments.get(&id).map(|e| (id, e.access_price)),
+                    Some(id) => state.experiment(&id).await.map(|e| (id, e.access_price)),
                     None => None,
                 };
                 price.map(|(id, amount)| payments::price_tag(&state.cfg, id, amount)).into_iter().collect::<Vec<_>>()

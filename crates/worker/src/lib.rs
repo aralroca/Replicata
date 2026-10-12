@@ -38,7 +38,10 @@ pub fn load_or_create_keypair(path: &Path) -> anyhow::Result<(Keypair, bool)> {
     std::fs::create_dir_all(path.parent().unwrap_or(Path::new(".")))?;
     std::fs::write(path, serde_json::to_string(&keypair.to_bytes().to_vec())?)?;
     #[cfg(unix)]
-    std::os::unix::fs::PermissionsExt::set_mode(&mut std::fs::metadata(path)?.permissions(), 0o600);
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
+    }
 
     Ok((keypair, true))
 }

@@ -37,6 +37,12 @@ pub struct Job {
     pub error: Option<String>,
 }
 
+impl Job {
+    pub fn new(stage: Stage) -> Self {
+        Self { stage, salt: None, output_hash: None, bundle: None, error: None }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct State {
     pub jobs: BTreeMap<String, Job>,

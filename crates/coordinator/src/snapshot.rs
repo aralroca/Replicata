@@ -20,7 +20,8 @@ pub struct Snapshot {
     pub vault_balances: HashMap<Pubkey, u64>,
 }
 
-pub type SharedSnapshot = Arc<RwLock<Snapshot>>;
+/// Readers clone the inner `Arc` (O(1)); the indexer swaps in a whole new snapshot.
+pub type SharedSnapshot = Arc<RwLock<Arc<Snapshot>>>;
 
 pub fn now() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or_default()
@@ -80,7 +81,7 @@ pub async fn fetch(rpc: &RpcClient) -> anyhow::Result<Snapshot> {
 pub async fn run_indexer(rpc: Arc<RpcClient>, shared: SharedSnapshot, refresh: Arc<Notify>, poll: Duration) {
     loop {
         match fetch(&rpc).await {
-            Ok(snapshot) => *shared.write().await = snapshot,
+            Ok(snapshot) => *shared.write().await = Arc::new(snapshot),
             Err(err) => tracing::warn!("indexer: {err:#}"),
         }
         tokio::select! {

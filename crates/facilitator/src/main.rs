@@ -155,7 +155,7 @@ async fn scheme_registry(rpc_url: &str, fee_payer: &str) -> anyhow::Result<(Sche
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().with_env_filter(tracing_subscriber::EnvFilter::from_default_env()).init();
-    let rpc_url = std::env::var("RPC_URL").unwrap_or_else(|_| "http://127.0.0.1:8899".into());
+    let rpc_url = std::env::var("RPC_URL").unwrap_or_else(|_| replicata_core::net::LOCALNET_RPC.into());
     let fee_payer = std::env::var("FEE_PAYER").context("FEE_PAYER (keypair JSON path) is required")?;
     let port = std::env::var("PORT").unwrap_or_else(|_| "8402".into());
     let (registry, chain_id) = scheme_registry(&rpc_url, &fee_payer).await?;

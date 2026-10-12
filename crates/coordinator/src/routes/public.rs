@@ -7,7 +7,7 @@ use axum::body::Bytes;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
-use replicata_client::Pubkey;
+use replicata_client::{Experiment, Pubkey};
 use replicata_core::{net, to_hex, JobSpec};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -68,13 +68,17 @@ pub async fn joined(state: &AppState, experiments: &[(Pubkey, String)]) -> ApiRe
     Ok(Joined { specs, bundles })
 }
 
-pub async fn render(state: &AppState, snapshot: &Snapshot, ids: Vec<Pubkey>) -> ApiResult<Vec<ExperimentView>> {
-    let keyed: Vec<(Pubkey, String)> =
-        ids.iter().filter_map(|id| snapshot.experiments.get(id).map(|e| (*id, to_hex(&e.spec_hash)))).collect();
+/// Renders the given experiments, joining their specs and bundle markers in two queries.
+pub async fn render(
+    state: &AppState,
+    snapshot: &Snapshot,
+    items: &[(Pubkey, Experiment)],
+) -> ApiResult<Vec<ExperimentView>> {
+    let keyed: Vec<(Pubkey, String)> = items.iter().map(|(id, e)| (*id, to_hex(&e.spec_hash))).collect();
     let joined = joined(state, &keyed).await?;
     let now = now();
 
-    Ok(keyed.iter().map(|(id, _)| experiment_view(id, &snapshot.experiments[id], snapshot, &joined, now)).collect())
+    Ok(items.iter().map(|(id, exp)| experiment_view(id, exp, snapshot, &joined, now)).collect())
 }
 
 #[derive(Deserialize, Default)]
@@ -85,43 +89,32 @@ pub struct ListQuery {
     limit: Option<usize>,
 }
 
-fn matches(view: &ExperimentView, q: &ListQuery) -> bool {
-    q.status.as_deref().is_none_or(|s| s == view.status)
-        && q.phase.as_deref().is_none_or(|p| p == view.phase)
-        && q.author.as_deref().is_none_or(|a| a == view.authority)
+fn matches(exp: &Experiment, q: &ListQuery, now: i64) -> bool {
+    q.status.as_deref().is_none_or(|s| s == views::status_name(exp.status))
+        && q.phase.as_deref().is_none_or(|p| p == views::phase_name(replicata_client::phase(exp, now)))
+        && q.author.as_deref().is_none_or(|a| a == exp.authority.to_string())
 }
 
+/// Filters, sorts (newest first) and limits on the raw accounts; only the page is rendered.
 pub async fn list_experiments(
     State(state): State<AppState>,
     Query(q): Query<ListQuery>,
 ) -> ApiResult<Json<Vec<ExperimentView>>> {
     let snapshot = state.snapshot.read().await.clone();
-    let mut ids: Vec<Pubkey> = snapshot.experiments.keys().copied().collect();
-    ids.sort_by_key(|id| std::cmp::Reverse((snapshot.experiments[id].created_at, *id)));
-    let views = render(&state, &snapshot, ids).await?;
-    let limit = q.limit.unwrap_or(50).min(200);
+    let now = now();
+    let mut items: Vec<(Pubkey, Experiment)> =
+        snapshot.experiments.iter().filter(|(_, e)| matches(e, &q, now)).map(|(id, e)| (*id, e.clone())).collect();
+    items.sort_by_key(|(id, e)| std::cmp::Reverse((e.created_at, *id)));
+    items.truncate(q.limit.unwrap_or(50).min(200));
 
-    Ok(Json(views.into_iter().filter(|v| matches(v, &q)).take(limit).collect()))
-}
-
-/// The indexer polls; an experiment created a moment ago is read straight from the chain.
-pub async fn snapshot_with(state: &AppState, id: &Pubkey) -> Snapshot {
-    let mut snapshot = state.snapshot.read().await.clone();
-    if snapshot.experiments.contains_key(id) {
-        return snapshot;
-    }
-    let fresh = state.rpc.get_account(id).await.ok().and_then(|a| replicata_client::decode(&a.data));
-    if let Some(experiment) = fresh {
-        snapshot.experiments.insert(*id, experiment);
-        state.refresh.notify_one();
-    }
-    snapshot
+    Ok(Json(render(&state, &snapshot, &items).await?))
 }
 
 pub async fn get_experiment(State(state): State<AppState>, Path(id): Path<String>) -> ApiResult<Json<ExperimentView>> {
     let id = parse_pubkey(&id)?;
-    let snapshot = snapshot_with(&state, &id).await;
-    let views = render(&state, &snapshot, vec![id]).await?;
+    let experiment = state.experiment(&id).await.ok_or_else(|| ApiError::not_found("experiment"))?;
+    let snapshot = state.snapshot.read().await.clone();
+    let views = render(&state, &snapshot, &[(id, experiment)]).await?;
 
     views.into_iter().next().map(Json).ok_or_else(|| ApiError::not_found("experiment"))
 }
@@ -136,9 +129,9 @@ pub async fn get_worker(State(state): State<AppState>, Path(worker): Path<String
 pub async fn get_author(State(state): State<AppState>, Path(author): Path<String>) -> ApiResult<Json<AuthorView>> {
     let author = parse_pubkey(&author)?;
     let snapshot = state.snapshot.read().await.clone();
-    let ids: Vec<Pubkey> =
-        snapshot.experiments.iter().filter(|(_, e)| e.authority == author).map(|(id, _)| *id).collect();
-    let experiments = render(&state, &snapshot, ids).await?;
+    let items: Vec<(Pubkey, Experiment)> =
+        snapshot.experiments.iter().filter(|(_, e)| e.authority == author).map(|(id, e)| (*id, e.clone())).collect();
+    let experiments = render(&state, &snapshot, &items).await?;
 
     Ok(Json(AuthorView {
         author: author.to_string(),

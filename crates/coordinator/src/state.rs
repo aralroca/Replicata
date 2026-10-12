@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use replicata_client::ProgramInstruction;
+use replicata_client::{Experiment, ProgramInstruction, Pubkey};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_signer::Signer;
 use solana_transaction::Transaction;
@@ -21,6 +21,16 @@ pub struct AppState {
 }
 
 impl AppState {
+    /// One experiment, read straight from the chain (the index polls, so it may be missing or
+    /// stale right after a transaction); falls back to the index if the RPC read fails.
+    pub async fn experiment(&self, id: &Pubkey) -> Option<Experiment> {
+        let fresh = self.rpc.get_account(id).await.ok().and_then(|a| replicata_client::decode(&a.data));
+        if fresh.is_some() {
+            return fresh;
+        }
+        self.snapshot.read().await.experiments.get(id).cloned()
+    }
+
     /// Signs with the crank keypair (fee payer), sends and confirms.
     pub async fn send(&self, instructions: &[ProgramInstruction]) -> anyhow::Result<String> {
         let blockhash = self.rpc.get_latest_blockhash().await?;

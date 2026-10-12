@@ -18,7 +18,7 @@ use x402_types::proto::SettleResponse;
 use crate::db;
 use crate::error::{ApiError, ApiResult};
 use crate::payments;
-use crate::routes::public::{parse_pubkey, snapshot_with};
+use crate::routes::public::parse_pubkey;
 use crate::snapshot::now;
 use crate::state::AppState;
 
@@ -46,12 +46,7 @@ pub fn dataset_name(path: &str) -> Option<String> {
 
 async fn load_verified(state: &AppState, path: &str) -> ApiResult<Verified> {
     let id = parse_pubkey(experiment_id(path).unwrap_or_default())?;
-    let exp = snapshot_with(state, &id)
-        .await
-        .experiments
-        .get(&id)
-        .cloned()
-        .ok_or_else(|| ApiError::not_found("experiment"))?;
+    let exp = state.experiment(&id).await.ok_or_else(|| ApiError::not_found("experiment"))?;
     if exp.status != ExperimentStatus::Replicated {
         return Err(ApiError::conflict("not_replicated", "the experiment has not been replicated yet"));
     }
@@ -182,16 +177,22 @@ fn validate_publish(req: PublishRequest) -> ApiResult<ValidPublish> {
     let params_ok = req.reward > 0
         && (1..=req.max_claims).contains(&req.k)
         && req.max_claims <= client::MAX_CLAIMS
-        && req.author_share_bps <= 10_000
+        && req.author_share_bps <= client::BPS_DENOMINATOR
         && req.access_price > 0
         && req.commit_secs > 0
         && req.reveal_secs > 0;
     if !params_ok {
-        return Err(ApiError::bad_request("need reward > 0, 1 <= k <= max_claims <= 5, author_share_bps <= 10000, access_price > 0 and positive windows"));
+        return Err(ApiError::bad_request(format!(
+            "need reward > 0, 1 <= k <= max_claims <= {}, author_share_bps <= {}, access_price > 0 and positive windows",
+            client::MAX_CLAIMS,
+            client::BPS_DENOMINATOR
+        )));
     }
     let now = now();
     let args = CreateExperimentArgs {
-        nonce: now as u64 * 1_000 + u64::from(rand_suffix()),
+        // Unix milliseconds: two publishes by the same agent within one millisecond would collide.
+        nonce: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis()
+            as u64,
         spec_hash: spec.spec_hash(),
         image_digest,
         reward: req.reward,
@@ -205,12 +206,6 @@ fn validate_publish(req: PublishRequest) -> ApiResult<ValidPublish> {
     };
 
     Ok(ValidPublish { authority, spec, args })
-}
-
-/// Sub-second entropy for the nonce so two publishes in the same second do not collide.
-fn rand_suffix() -> u16 {
-    (std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().subsec_millis() % 1000)
-        as u16
 }
 
 /// Pre-paywall guard for `POST /v1/experiments`: invalid bodies are rejected for free.

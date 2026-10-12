@@ -119,7 +119,3 @@ pub async fn record_payment(pool: &PgPool, p: &Payment<'_>) -> sqlx::Result<bool
 
     Ok(result.rows_affected() == 1)
 }
-
-pub async fn payments_count(pool: &PgPool) -> sqlx::Result<i64> {
-    sqlx::query("SELECT count(*) AS n FROM payments").fetch_one(pool).await.map(|row| row.get("n"))
-}

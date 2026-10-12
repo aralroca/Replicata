@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { USDC_DECIMALS } from "@/lib/amounts";
 import { DEFAULT_ECONOMICS_FORM, economicsIssues, type EconomicsForm } from "@/lib/publish/economics-form";
 import { EMPTY_SPEC_FORM, specFormIssues, type SpecForm } from "@/lib/publish/spec-form";
 import type { SpecIssue } from "@/lib/spec/validate";
@@ -54,7 +55,7 @@ function useSteps(blocking: (step: Step) => SpecIssue[]) {
   return { step, touched, next, back: () => setStep(previousStep) };
 }
 
-export function usePublishWizard(decimals = 6) {
+export function usePublishWizard(decimals = USDC_DECIMALS) {
   const forms = useForms();
   const blocking = (step: Step) => issuesFor(step, forms.spec, forms.economics, decimals);
   const steps = useSteps(blocking);

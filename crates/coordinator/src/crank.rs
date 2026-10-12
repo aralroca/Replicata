@@ -55,20 +55,20 @@ async fn ensure_token_accounts(state: &AppState, owners: &[Pubkey], mint: &Pubke
 }
 
 async fn run_job(state: &AppState, snapshot: &Snapshot, job: &Job) -> anyhow::Result<String> {
-    match job {
+    let (experiment, payees, ix) = match job {
         Job::Finalize { experiment, revealed } => {
             let exp = &snapshot.experiments[experiment];
-            let owners: Vec<Pubkey> = revealed.iter().copied().chain([exp.authority]).collect();
-            ensure_token_accounts(state, &owners, &exp.mint).await?;
-            state.send(&[client::finalize(experiment, exp, revealed)]).await
+            (exp, revealed.as_slice(), client::finalize(experiment, exp, revealed))
         }
         Job::Royalties { experiment } => {
             let exp = &snapshot.experiments[experiment];
-            let owners: Vec<Pubkey> = client::replicators(exp).iter().copied().chain([exp.authority]).collect();
-            ensure_token_accounts(state, &owners, &exp.mint).await?;
-            state.send(&[client::claim_royalties(experiment, exp)]).await
+            (exp, client::replicators(exp), client::claim_royalties(experiment, exp))
         }
-    }
+    };
+    let owners: Vec<Pubkey> = payees.iter().copied().chain([experiment.authority]).collect();
+
+    ensure_token_accounts(state, &owners, &experiment.mint).await?;
+    state.send(&[ix]).await
 }
 
 pub async fn run(state: AppState, every: Duration) {

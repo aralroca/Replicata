@@ -113,22 +113,16 @@ async fn init(cli: &Cli) -> anyhow::Result<()> {
 async fn status(cli: &Cli) -> anyhow::Result<()> {
     let (api, chain) = connect(cli).await?;
     let (lamports, tokens) = chain.balances().await?;
-    let profile: serde_json::Value =
-        reqwest::get(format!("{}/v1/workers/{}", api.base, chain.pubkey())).await?.json().await?;
+    let profile = api.worker(&chain.pubkey().to_string()).await?;
     println!("worker  {}", chain.pubkey());
     println!("SOL     {:.4}", lamports as f64 / 1e9);
     println!("USDC    {}", format_usdc(tokens));
-    println!(
-        "record  ok {} · bad {} · earned {} USDC",
-        profile["ok"],
-        profile["bad"],
-        format_usdc(profile["earned"].as_u64().unwrap_or(0))
-    );
+    println!("record  ok {} · bad {} · earned {} USDC", profile.ok, profile.bad, format_usdc(profile.earned));
     Ok(())
 }
 
 fn worker(api: Coordinator, chain: Chain, chaos: bool, exit_after: Option<ExitAfter>) -> Worker {
-    let http = pay::paying_client(chain.keypair.clone(), chain.rpc.clone());
+    let http = chain.paying_client();
 
     Worker { chain, api, http, home: home(), chaos, exit_after: exit_after.map(ExitAfter::stage) }
 }
@@ -155,7 +149,7 @@ async fn withdraw(cli: &Cli, id: &str) -> anyhow::Result<()> {
 
 async fn buy(cli: &Cli, id: &str, output: Option<PathBuf>) -> anyhow::Result<()> {
     let (api, chain) = connect(cli).await?;
-    let http = pay::paying_client(chain.keypair.clone(), chain.rpc.clone());
+    let http = chain.paying_client();
     let bought = pay::buy(&http, &api.base, id).await?;
     let path = output.unwrap_or_else(|| PathBuf::from(format!("{id}.tar.gz")));
     std::fs::write(&path, &bought.bundle)?;
@@ -170,7 +164,7 @@ async fn publish(cli: &Cli, request: PathBuf) -> anyhow::Result<()> {
     let (api, chain) = connect(cli).await?;
     let mut body: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(request)?)?;
     body["authority"] = chain.pubkey().to_string().into();
-    let http = pay::paying_client(chain.keypair.clone(), chain.rpc.clone());
+    let http = chain.paying_client();
     let (experiment, signature) = pay::publish(&http, &chain, &api.base, body).await?;
     println!("published experiment {experiment} (tx {signature})");
     Ok(())

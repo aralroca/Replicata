@@ -23,6 +23,11 @@ impl Chain {
         Self { rpc, keypair, mint }
     }
 
+    /// HTTP client that pays x402 requests with this wallet.
+    pub fn paying_client(&self) -> reqwest_middleware::ClientWithMiddleware {
+        crate::pay::paying_client(self.keypair.clone(), self.rpc.clone())
+    }
+
     pub fn pubkey(&self) -> Pubkey {
         self.keypair.pubkey()
     }
