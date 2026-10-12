@@ -1,0 +1,26 @@
+[package]
+name = "replicata-program-tests"
+version = "0.1.0"
+description = "LiteSVM tests for the Replicata program (run `anchor build` first)"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+anchor-lang = "1.2.1"
+replicata = { path = "../programs/replicata", features = ["no-entrypoint"] }
+replicata-core.workspace = true
+litesvm = "0.18.0"
+litesvm-token = "0.18.0"
+solana-clock = "3.2.1"
+solana-keypair = "3.1.2"
+solana-signer = "3.0.1"
+solana-transaction = "4.3.0"
+solana-instruction-error = "2.5.0"
+solana-transaction-error = "3.4.0"
+spl-token-interface = "3.0.0"
+solana-program-pack = "3.1.0"
+spl-associated-token-account-interface = "2.0.0"
+
+[dev-dependencies]
+proptest.workspace = true

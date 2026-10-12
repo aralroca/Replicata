@@ -5,7 +5,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-replicata = "Fiv4CLG7Y6YnA7y8JxZ3wAG3fXoGixbXjdGLpWkfAnTE"
+replicata = "G9Ssnp8rjg7gpi4Sm3EZLoC73z9pdXd9etJzUDH39Wj9"
 
 [provider]
 cluster = "localnet"

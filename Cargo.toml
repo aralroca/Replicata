@@ -2,6 +2,7 @@
 members = [
     "programs/replicata",
     "crates/core",
+    "tests",
 
 ]
 resolver = "2"
