@@ -1,0 +1,40 @@
+[package]
+name = "replicata-worker"
+version = "0.1.0"
+description = "Replicata worker CLI: replicate experiments in a deterministic sandbox and get paid"
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "replicata"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+base64 = "0.22.1"
+bincode = "1.3.3"
+bollard = "0.21.1"
+bs58 = "0.5.1"
+clap = { version = "4.6.7", features = ["derive", "env"] }
+futures-util = "0.3"
+hex.workspace = true
+rand = "0.8"
+replicata-client = { path = "../client" }
+replicata-core.workspace = true
+reqwest = { version = "0.13.5", features = ["json"] }
+reqwest-middleware = { version = "0.5.2", features = ["json"] }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+solana-client = "3.1.14"
+solana-commitment-config = "3.1.1"
+solana-keypair = "3.1.2"
+solana-signer = "3.0.1"
+solana-transaction = "3.1.0"
+tempfile.workspace = true
+tokio = { version = "1.53.2", features = ["full"] }
+x402-chain-solana = { version = "2.0.2", features = ["client"] }
+x402-reqwest = { version = "2.0.2", features = ["json"] }
+
+[dev-dependencies]
+wiremock = "0.6.5"

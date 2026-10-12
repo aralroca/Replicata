@@ -17,6 +17,7 @@
     "@solana-program/token": "^0.17.0",
     "@solana/kit": "^8.4.0",
     "@wallet-ui/react": "^4.4.1",
+    "@wallet-ui/tailwind": "^4.4.1",
     "@x402/core": "^2.28.0",
     "@x402/fetch": "^2.28.0",
     "@x402/svm": "^2.28.0",

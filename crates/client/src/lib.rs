@@ -2,13 +2,14 @@
 //! Anchor-generated `accounts::*` / `instruction::*` (no hand-written instruction layouts).
 //! Used by the coordinator, the worker and the LiteSVM tests.
 
-use anchor_lang::prelude::Pubkey;
 use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
 use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
 use spl_associated_token_account_interface::address::get_associated_token_address_with_program_id;
 
+pub use anchor_lang::prelude::Pubkey;
+pub use anchor_lang::solana_program::instruction::Instruction as ProgramInstruction;
 pub use replicata::state::{Claim, ClaimState, Experiment, ExperimentStatus, WorkerProfile};
-pub use replicata::{CreateExperimentArgs, ID as PROGRAM_ID};
+pub use replicata::{CreateExperimentArgs, ID as PROGRAM_ID, MAX_CLAIMS};
 
 /// Classic SPL Token (USDC on devnet is a classic mint).
 pub const TOKEN_PROGRAM_ID: Pubkey = spl_token_interface::ID;

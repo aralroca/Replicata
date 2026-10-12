@@ -29,6 +29,9 @@ importers:
       '@wallet-ui/react':
         specifier: ^4.4.1
         version: 4.4.1(@solana/kit@8.4.0(typescript@5.9.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3)
+      '@wallet-ui/tailwind':
+        specifier: ^4.4.1
+        version: 4.4.1(tailwindcss@4.3.3)
       '@x402/core':
         specifier: ^2.28.0
         version: 2.28.0
@@ -1967,6 +1970,12 @@ packages:
     peerDependencies:
       '@solana/kit': ^8.4.0
       react: '>=18'
+
+  '@wallet-ui/tailwind@4.4.1':
+    resolution: {integrity: sha512-DIAXTphahLAt9yNzO6azls5UPUdn4ou7mBM03ggi4xfXCea0Y01SbiUnzRaG5S43SSIrtURBciwlRWe5azPkmQ==}
+    engines: {node: '>=20.19.0'}
+    peerDependencies:
+      tailwindcss: ^4.2.2
 
   '@x402/core@2.28.0':
     resolution: {integrity: sha512-Da/7zKxCKqpBoB4Msc9tFgkAv7tJTD8nG+DSSm+QdXAyJS4PQsmgVSKe17rDJTtlu0pwNbLcOje6MyQ6kaDkig==}
@@ -5551,6 +5560,10 @@ snapshots:
       - fastestsmallesttextencoderdecoder
       - react-dom
       - typescript
+
+  '@wallet-ui/tailwind@4.4.1(tailwindcss@4.3.3)':
+    dependencies:
+      tailwindcss: 4.3.3
 
   '@x402/core@2.28.0':
     dependencies:

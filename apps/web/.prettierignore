@@ -1,0 +1,7 @@
+.next
+node_modules
+src/generated
+playwright-report
+test-results
+coverage
+public/install.sh

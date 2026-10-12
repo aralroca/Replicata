@@ -1,0 +1,69 @@
+@import "tailwindcss";
+@import "@wallet-ui/tailwind/index.css";
+
+:root {
+  --background: #0b0f14;
+  --foreground: #e6edf3;
+  --muted: #9aa7b4;
+  --card: #121821;
+  --border: #263241;
+  --accent: #58a6ff;
+  --success: #3fb950;
+  --warning: #d29922;
+  --danger: #f85149;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+  }
+
+  a {
+    @apply text-accent underline-offset-2 hover:underline;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-border bg-card p-5;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply bg-accent text-[#0b0f14] hover:brightness-110;
+  }
+
+  .btn-ghost {
+    @apply border border-border text-foreground hover:bg-white/5;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent;
+  }
+
+  .mono {
+    font-family: var(--font-mono);
+  }
+}

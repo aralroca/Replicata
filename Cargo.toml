@@ -4,6 +4,8 @@ members = [
     "crates/core",
     "crates/client",
     "crates/facilitator",
+    "crates/coordinator",
+    "crates/worker",
     "tests",
 
 ]
