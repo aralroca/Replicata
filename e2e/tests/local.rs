@@ -271,3 +271,32 @@ async fn a_worker_that_crashes_after_committing_resumes_and_reveals() {
     ctx.wait_for(&id, WAIT, |v| v.status == "replicated").await;
     assert_eq!(ctx.balance(&keypair.pubkey()).await, 6 * USDC);
 }
+
+#[tokio::test]
+#[ignore]
+async fn closing_your_token_account_cannot_block_settlement() {
+    let ctx = Ctx::start().await.unwrap();
+    let author = ctx.user(10);
+    let saboteur = ctx.user(1);
+    let id = ctx.publish(&author, &example_spec("lorenz-int"), terms(1, USDC, USDC, 10_000)).await.unwrap();
+    let mut worker = ctx.worker(&saboteur, false);
+    worker.exit_after = Some(Stage::Uploaded);
+    worker.process(&id.to_string()).await.unwrap();
+
+    // Its whole balance is locked as bond, so it can close its (empty) token account.
+    let ata = replicata_client::ata(&saboteur.pubkey(), &ctx.mint);
+    let close = spl_token_interface::instruction::close_account(
+        &spl_token_interface::ID,
+        &ata,
+        &saboteur.pubkey(),
+        &saboteur.pubkey(),
+        &[],
+    )
+    .unwrap();
+    ctx.chain(&saboteur).send(&[close]).await.unwrap();
+
+    let resumed = replicata_worker::job::Worker { exit_after: None, ..worker };
+    assert_eq!(resumed.process(&id.to_string()).await.unwrap(), Stage::Revealed);
+    ctx.wait_for(&id, WAIT, |v| v.status == "replicated").await;
+    assert_eq!(ctx.balance(&saboteur.pubkey()).await, 2 * USDC, "the crank recreated the account and paid it");
+}

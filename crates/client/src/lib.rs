@@ -159,6 +159,32 @@ pub fn withdraw_bond(worker: &Pubkey, experiment: &Pubkey, exp: &Experiment) -> 
     ix(accounts, replicata::instruction::WithdrawBond {})
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recognises_create_experiment() {
+        let args = CreateExperimentArgs {
+            nonce: 1,
+            spec_hash: [0; 32],
+            image_digest: [0; 32],
+            reward: 1,
+            bond: 0,
+            k: 1,
+            max_claims: 1,
+            commit_deadline: 1,
+            reveal_deadline: 2,
+            access_price: 1,
+            author_share_bps: 0,
+        };
+        let (_, ix) = create_experiment(&Pubkey::new_unique(), &Pubkey::new_unique(), args);
+
+        assert!(is_create_experiment(&ix.data));
+        assert!(!is_create_experiment(&commit(&Pubkey::new_unique(), &Pubkey::new_unique(), [0; 32]).data));
+    }
+}
+
 pub fn replicators(exp: &Experiment) -> &[Pubkey] {
     &exp.replicators[..exp.agree_count as usize]
 }
@@ -168,21 +194,9 @@ pub fn decode<T: AccountDeserialize>(data: &[u8]) -> Option<T> {
     T::try_deserialize(&mut &data[..]).ok()
 }
 
-/// Anchor account discriminators, for `getProgramAccounts` memcmp filters.
-pub mod discriminator {
-    use anchor_lang::Discriminator;
-
-    pub fn experiment() -> &'static [u8] {
-        super::Experiment::DISCRIMINATOR
-    }
-
-    pub fn claim() -> &'static [u8] {
-        super::Claim::DISCRIMINATOR
-    }
-
-    pub fn worker_profile() -> &'static [u8] {
-        super::WorkerProfile::DISCRIMINATOR
-    }
+/// Whether instruction data is a `create_experiment` call (Anchor discriminator prefix).
+pub fn is_create_experiment(data: &[u8]) -> bool {
+    data.starts_with(<replicata::instruction::CreateExperiment as anchor_lang::Discriminator>::DISCRIMINATOR)
 }
 
 /// Phase of an open experiment at time `now` (mirrors the on-chain windows).

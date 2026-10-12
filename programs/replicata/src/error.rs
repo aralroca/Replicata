@@ -36,4 +36,6 @@ pub enum ReplicataError {
     BondNotWithdrawable,
     #[msg("Arithmetic overflow")]
     Overflow,
+    #[msg("This bond was forfeited to the workers who revealed")]
+    BondForfeited,
 }

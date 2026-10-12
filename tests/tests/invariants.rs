@@ -138,14 +138,23 @@ fn run(s: Scenario) -> Result<(), TestCaseError> {
             env.transfer(&consumer, &vault, s.royalties);
             env.claim_royalties(&experiment).unwrap();
         }
-    } else {
-        for (w, a) in workers.iter().zip(&s.actions) {
-            if !matches!(a, Action::Reveal(_)) {
-                env.withdraw_bond(&experiment, w).unwrap();
-            }
-        }
+    } else if revealers.is_empty() {
+        // Nobody revealed (broken experiment): every bond can be withdrawn.
+        workers.iter().for_each(|w| env.withdraw_bond(&experiment, w).unwrap());
         for (w, b) in workers.iter().zip(&before) {
             prop_assert_eq!(env.balance(&w.pubkey()), *b + s.bond, "every bond refunded");
+        }
+    } else {
+        // Someone revealed: revealers get their bond back plus the bonds of those who didn't.
+        for ((w, a), b) in workers.iter().zip(&s.actions).zip(&before) {
+            let now = env.balance(&w.pubkey());
+            match a {
+                Action::Reveal(_) => prop_assert!(now >= *b + s.bond),
+                _ => {
+                    prop_assert_eq!(now, *b, "unrevealed bond forfeited");
+                    prop_assert!(env.withdraw_bond(&experiment, w).is_err());
+                }
+            }
         }
     }
 

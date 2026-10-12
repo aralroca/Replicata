@@ -2,6 +2,9 @@
 FROM rust:1-bookworm AS build
 WORKDIR /src
 COPY . .
+# The workspace release profile (fat LTO, 1 codegen unit) targets the on-chain program; a server
+# does not need it and fat LTO can exhaust the memory of small builders.
+ENV CARGO_PROFILE_RELEASE_LTO=thin CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16
 RUN cargo build --release -p replicata-coordinator
 
 FROM debian:bookworm-slim

@@ -35,14 +35,37 @@ pub fn jobs(snapshot: &Snapshot, now: i64) -> Vec<Job> {
         .collect()
 }
 
+/// Recreates (paid by the crank) any payout token account that is missing, so nobody can block
+/// a settlement by closing their own token account.
+async fn ensure_token_accounts(state: &AppState, owners: &[Pubkey], mint: &Pubkey) -> anyhow::Result<()> {
+    let atas: Vec<Pubkey> = owners.iter().map(|o| client::ata(o, mint)).collect();
+    let existing = state.rpc.get_multiple_accounts(&atas).await?;
+    let payer = solana_signer::Signer::pubkey(&state.cfg.crank);
+    let missing: Vec<_> = owners
+        .iter()
+        .zip(existing)
+        .filter(|(_, account)| account.is_none())
+        .map(|(owner, _)| client::create_ata_idempotent(&payer, owner, mint))
+        .collect();
+
+    if !missing.is_empty() {
+        state.send(&missing).await?;
+    }
+    Ok(())
+}
+
 async fn run_job(state: &AppState, snapshot: &Snapshot, job: &Job) -> anyhow::Result<String> {
     match job {
         Job::Finalize { experiment, revealed } => {
             let exp = &snapshot.experiments[experiment];
+            let owners: Vec<Pubkey> = revealed.iter().copied().chain([exp.authority]).collect();
+            ensure_token_accounts(state, &owners, &exp.mint).await?;
             state.send(&[client::finalize(experiment, exp, revealed)]).await
         }
         Job::Royalties { experiment } => {
             let exp = &snapshot.experiments[experiment];
+            let owners: Vec<Pubkey> = client::replicators(exp).iter().copied().chain([exp.authority]).collect();
+            ensure_token_accounts(state, &owners, &exp.mint).await?;
             state.send(&[client::claim_royalties(experiment, exp)]).await
         }
     }

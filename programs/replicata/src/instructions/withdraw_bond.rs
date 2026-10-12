@@ -27,10 +27,12 @@ pub struct WithdrawBond<'info> {
     pub token_program: Interface<'info, TokenInterface>,
 }
 
-/// After an `Unresolved` outcome, a worker that never revealed gets its bond back.
+/// After an `Unresolved` outcome where **nobody** revealed (e.g. a broken image), workers get
+/// their bond back. If someone revealed, `finalize` already paid unrevealed bonds to them.
 pub fn handle_withdraw_bond(ctx: Context<WithdrawBond>) -> Result<()> {
     let experiment = &ctx.accounts.experiment;
     require!(experiment.status == ExperimentStatus::Unresolved, ReplicataError::BondNotWithdrawable);
+    require!(experiment.reveals_count == 0, ReplicataError::BondForfeited);
     require!(
         matches!(ctx.accounts.claim.state, ClaimState::Claimed | ClaimState::Committed),
         ReplicataError::InvalidClaimState

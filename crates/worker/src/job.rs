@@ -1,16 +1,21 @@
 //! One replication, as a resumable state machine:
 //! claim → execute (sandbox) → commit → upload bundle → wait for the reveal window → reveal.
+//!
+//! Every on-chain step first checks the claim account, so resuming after a crash (or after a
+//! transaction that landed but whose confirmation was lost) never repeats a step. Only
+//! deterministic failures are terminal; anything transient returns `Err` and is retried.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use anyhow::Context;
-use replicata_client::Pubkey;
+use replicata_client::{ClaimState, Pubkey};
 use replicata_core::{bundle, commitment, from_hex, hash_dir, to_hex, JobSpec};
 use reqwest_middleware::ClientWithMiddleware;
 
 use crate::api::{Coordinator, ExperimentView};
 use crate::chain::Chain;
+use crate::inputs::InputMismatch;
 use crate::state::{Job, Stage, State};
 use crate::{inputs, sandbox};
 
@@ -25,12 +30,32 @@ pub struct Worker {
     pub exit_after: Option<Stage>,
 }
 
-fn log(id: &str, msg: impl AsRef<str>) {
+/// A failure that would happen again on retry (bad spec, non-zero exit, timeout...).
+#[derive(Debug)]
+pub struct Deterministic(pub String);
+
+impl std::fmt::Display for Deterministic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for Deterministic {}
+
+fn deterministic(msg: impl Into<String>) -> anyhow::Error {
+    Deterministic(msg.into()).into()
+}
+
+fn is_deterministic(err: &anyhow::Error) -> bool {
+    err.is::<Deterministic>() || err.is::<InputMismatch>()
+}
+
+pub fn log(id: &str, msg: impl AsRef<str>) {
     println!("[{}] {}", &id[..8.min(id.len())], msg.as_ref());
 }
 
 impl Worker {
-    fn state_path(&self) -> PathBuf {
+    pub fn state_path(&self) -> PathBuf {
         self.home.join("state.json")
     }
 
@@ -44,15 +69,20 @@ impl Worker {
         state.save(&self.state_path())
     }
 
-    /// Drives the job until it is revealed or failed (or until `exit_after`).
+    /// Drives the job until it is revealed or failed (or until `exit_after`). Returns early,
+    /// without doing anything, once the experiment is no longer open.
     pub async fn process(&self, id: &str) -> anyhow::Result<Stage> {
         let key: Pubkey = id.parse()?;
         let mut job = State::load(&self.state_path())?.jobs.get(id).cloned();
+        let open = self.api.experiment(id).await?.status == "open";
+        if !open {
+            return job.map(|j| j.stage).context("the experiment is no longer open");
+        }
 
         loop {
             let next = match &job {
                 None => self.claim(id, &key).await?,
-                Some(j) if j.stage == Stage::Claimed => self.execute(id, j).await,
+                Some(j) if j.stage == Stage::Claimed => self.execute(id, j).await?,
                 Some(j) if j.stage == Stage::Executed => self.commit(id, &key, j).await?,
                 Some(j) if j.stage == Stage::Committed => self.upload(id, j).await?,
                 Some(j) if j.stage == Stage::Uploaded => self.reveal(id, &key, j).await?,
@@ -68,8 +98,8 @@ impl Worker {
     }
 
     async fn claim(&self, id: &str, key: &Pubkey) -> anyhow::Result<Job> {
-        let view = self.api.experiment(id).await?;
-        if view.claim_of(&self.chain.pubkey().to_string()).is_none() {
+        if self.chain.my_claim(key).await?.is_none() {
+            let view = self.api.experiment(id).await?;
             self.chain.ensure_token_account().await?;
             let sig = self.chain.claim(key).await.context("claim failed")?;
             log(id, format!("claimed (bond {}) tx {sig}", replicata_core::net::format_usdc(view.bond)));
@@ -77,48 +107,58 @@ impl Worker {
         Ok(Job { stage: Stage::Claimed, salt: None, output_hash: None, bundle: None, error: None })
     }
 
-    /// Never returns `Err`: a failed run is recorded as `Stage::Failed`.
-    async fn execute(&self, id: &str, job: &Job) -> Job {
+    /// `Failed` for deterministic failures; transient ones propagate (the job stays `Claimed`).
+    async fn execute(&self, id: &str, job: &Job) -> anyhow::Result<Job> {
         match self.try_execute(id).await {
-            Ok((hash, bundle)) => Job {
+            Ok((hash, bundle)) => Ok(Job {
                 stage: Stage::Executed,
                 salt: Some(hex::encode(rand::random::<[u8; 32]>())),
                 output_hash: Some(to_hex(&hash)),
                 bundle: Some(bundle),
                 error: None,
-            },
-            Err(err) => {
+            }),
+            Err(err) if is_deterministic(&err) => {
                 log(id, format!("execution failed: {err:#}"));
-                Job { stage: Stage::Failed, error: Some(format!("{err:#}")), ..job.clone() }
+                Ok(Job { stage: Stage::Failed, error: Some(format!("{err:#}")), ..job.clone() })
             }
+            Err(err) => Err(err.context("execution interrupted (will retry)")),
         }
     }
 
     async fn try_execute(&self, id: &str) -> anyhow::Result<([u8; 32], PathBuf)> {
         let view = self.api.experiment(id).await?;
-        let spec = view.spec.clone().context("the coordinator has no spec for this experiment")?;
+        let spec = view.spec.clone().context("the coordinator has no spec for this experiment yet")?;
+        verify_spec(&view, &spec).map_err(|e| deterministic(format!("{e:#}")))?;
         let dir = self.work_dir(id);
         let (inputs_dir, out) = (dir.join("inputs"), dir.join("out"));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&inputs_dir)?;
         std::fs::create_dir_all(&out)?;
-        verify_spec(&view, &spec)?;
         inputs::fetch_all(&self.http, &spec.inputs, &inputs_dir).await?;
         log(id, format!("running {} …", spec.image_ref()));
         let outcome = sandbox::run(&sandbox::docker()?, &spec, &inputs_dir, &out).await?;
-        anyhow::ensure!(!outcome.timed_out, "timed out after {}s", spec.timeout_s);
-        anyhow::ensure!(outcome.exit_code == 0, "exit code {}:\n{}", outcome.exit_code, outcome.logs);
+        if outcome.timed_out {
+            return Err(deterministic(format!("timed out after {}s", spec.timeout_s)));
+        }
+        if outcome.exit_code != 0 {
+            return Err(deterministic(format!("exit code {}:\n{}", outcome.exit_code, outcome.logs)));
+        }
         if self.chaos {
             std::fs::write(out.join("chaos.txt"), rand::random::<[u8; 16]>())?;
         }
-        package(&out, &dir)
+        package(&out, &dir).map_err(|e| deterministic(format!("invalid output: {e:#}")))
     }
 
     async fn commit(&self, id: &str, key: &Pubkey, job: &Job) -> anyhow::Result<Job> {
         let (hash, salt) = hash_and_salt(job)?;
-        let sig = self.chain.commit(key, commitment(&hash, &salt, &self.chain.pubkey().to_bytes())).await?;
-        log(id, format!("committed {} tx {sig}", to_hex(&hash)));
-
+        let ours = commitment(&hash, &salt, &self.chain.pubkey().to_bytes());
+        let claim = self.chain.my_claim(key).await?.context("claim account not found")?;
+        if claim.state == ClaimState::Claimed {
+            let sig = self.chain.commit(key, ours).await?;
+            log(id, format!("committed {} tx {sig}", to_hex(&hash)));
+        } else {
+            anyhow::ensure!(claim.commitment == ours, "on-chain commitment differs from the saved one");
+        }
         Ok(Job { stage: Stage::Committed, ..job.clone() })
     }
 
@@ -132,10 +172,12 @@ impl Worker {
 
     async fn reveal(&self, id: &str, key: &Pubkey, job: &Job) -> anyhow::Result<Job> {
         let (hash, salt) = hash_and_salt(job)?;
-        self.wait_for_reveal_window(id).await?;
-        let sig = self.chain.reveal(key, hash, salt).await.context("reveal failed")?;
-        log(id, format!("revealed tx {sig}"));
-
+        let claim = self.chain.my_claim(key).await?.context("claim account not found")?;
+        if claim.state == ClaimState::Committed {
+            self.wait_for_reveal_window(id).await?;
+            let sig = self.chain.reveal(key, hash, salt).await.context("reveal failed")?;
+            log(id, format!("revealed tx {sig}"));
+        }
         Ok(Job { stage: Stage::Revealed, ..job.clone() })
     }
 
@@ -148,6 +190,20 @@ impl Worker {
                 other => anyhow::bail!("reveal window is over (phase {other})"),
             }
         }
+    }
+
+    /// Recovers the bond of an unresolved experiment nobody revealed.
+    pub async fn withdraw(&self, id: &str) -> anyhow::Result<Stage> {
+        let sig = self.chain.withdraw_bond(&id.parse()?).await?;
+        let job = State::load(&self.state_path())?.jobs.get(id).cloned();
+        let withdrawn = Job {
+            stage: Stage::Withdrawn,
+            ..job.unwrap_or(Job { stage: Stage::Withdrawn, salt: None, output_hash: None, bundle: None, error: None })
+        };
+        self.save(id, &withdrawn)?;
+        log(id, format!("bond withdrawn tx {sig}"));
+
+        Ok(Stage::Withdrawn)
     }
 }
 

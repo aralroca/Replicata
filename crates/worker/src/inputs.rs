@@ -19,14 +19,24 @@ pub async fn fetch_all(http: &ClientWithMiddleware, inputs: &[Input], dir: &Path
     Ok(())
 }
 
+/// The downloaded bytes do not match the spec: deterministic, retrying cannot fix it.
+#[derive(Debug)]
+pub struct InputMismatch(pub String);
+
+impl std::fmt::Display for InputMismatch {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for InputMismatch {}
+
 pub fn verify(input: &Input, bytes: &[u8]) -> anyhow::Result<()> {
     let actual = hex::encode(Sha256::digest(bytes));
-    anyhow::ensure!(
-        actual == input.sha256.to_lowercase(),
-        "input {} has sha256 {actual}, expected {}",
-        input.path,
-        input.sha256
-    );
+    if actual != input.sha256.to_lowercase() {
+        let msg = format!("input {} has sha256 {actual}, expected {}", input.path, input.sha256);
+        return Err(InputMismatch(msg).into());
+    }
     Ok(())
 }
 

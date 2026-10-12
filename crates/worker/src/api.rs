@@ -34,6 +34,7 @@ pub struct ExperimentView {
     pub spec_hash: String,
     pub bond: u64,
     pub reward: u64,
+    pub reveals_count: u8,
     pub k: u8,
     pub max_claims: u8,
     pub claims_count: u8,

@@ -26,4 +26,5 @@ tempfile.workspace = true
 tokio = { version = "1.53.2", features = ["full"] }
 x402-chain-solana = { version = "2.0.2", features = ["client"] }
 x402-reqwest = "2.0.2"
+spl-token-interface = "3.0.0"
 

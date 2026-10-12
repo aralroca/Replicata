@@ -48,8 +48,11 @@ export const REPLICATA_ERROR__NO_ROYALTIES = 0x177e; // 6014
 export const REPLICATA_ERROR__BOND_NOT_WITHDRAWABLE = 0x177f; // 6015
 /** Overflow: Arithmetic overflow */
 export const REPLICATA_ERROR__OVERFLOW = 0x1780; // 6016
+/** BondForfeited: This bond was forfeited to the workers who revealed */
+export const REPLICATA_ERROR__BOND_FORFEITED = 0x1781; // 6017
 
 export type ReplicataError =
+  | typeof REPLICATA_ERROR__BOND_FORFEITED
   | typeof REPLICATA_ERROR__BOND_NOT_WITHDRAWABLE
   | typeof REPLICATA_ERROR__CLAIMS_FULL
   | typeof REPLICATA_ERROR__COMMITMENT_MISMATCH
@@ -71,6 +74,7 @@ export type ReplicataError =
 let replicataErrorMessages: Record<ReplicataError, string> | undefined;
 if (process.env["NODE_ENV"] !== "production") {
   replicataErrorMessages = {
+    [REPLICATA_ERROR__BOND_FORFEITED]: `This bond was forfeited to the workers who revealed`,
     [REPLICATA_ERROR__BOND_NOT_WITHDRAWABLE]: `Bonds can only be withdrawn from unresolved experiments`,
     [REPLICATA_ERROR__CLAIMS_FULL]: `All claim slots are taken`,
     [REPLICATA_ERROR__COMMITMENT_MISMATCH]: `The revealed hash and salt do not match the commitment`,

@@ -89,7 +89,11 @@ struct Fixture {
 async fn fixture(facilitator: &str) -> Fixture {
     let (author, worker) = (Pubkey::new_unique(), Pubkey::new_unique());
     let (open, replicated) = (Pubkey::new_unique(), Pubkey::new_unique());
-    let bundle = bundle::pack_files(&[("result.json".into(), b"{\"ok\":true}".to_vec())]).unwrap();
+    let bundle = bundle::pack_files(&[
+        ("plots/run 1.csv".into(), b"1,2\n".to_vec()),
+        ("result.json".into(), b"{\"ok\":true}".to_vec()),
+    ])
+    .unwrap();
     let result_hash = bundle::hash_bundle(&bundle).unwrap();
     let (open_spec, replicated_spec) = (spec(rand_seed()), spec(rand_seed()));
     let mut snapshot = Snapshot::default();
@@ -102,7 +106,10 @@ async fn fixture(facilitator: &str) -> Fixture {
         .await
         .expect("Postgres for tests: run scripts/localnet.sh start or set TEST_DATABASE_URL");
     db::insert_spec(&db, &to_hex(&open_spec.spec_hash()), &open_spec).await.unwrap();
-    db::upsert_bundle(&db, &replicated.to_string(), &worker.to_string(), &to_hex(&result_hash), &bundle).await.unwrap();
+    let files = vec!["plots/run 1.csv".to_string(), "result.json".to_string()];
+    db::upsert_bundle(&db, &replicated.to_string(), &worker.to_string(), &to_hex(&result_hash), &bundle, &files)
+        .await
+        .unwrap();
     let state = AppState {
         cfg: Arc::new(config(facilitator)),
         db,
@@ -114,8 +121,12 @@ async fn fixture(facilitator: &str) -> Fixture {
     Fixture { app: routes::router(state.clone()), state, open, replicated, author, worker, bundle }
 }
 
+/// Unique per call, across parallel tests and across runs sharing the same database.
 fn rand_seed() -> u64 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos() as u64
+    static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos() as u64;
+
+    nanos.wrapping_add(COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
 }
 
 fn claim(experiment: Pubkey, worker: Pubkey, state: ClaimState) -> Claim {
@@ -283,7 +294,7 @@ async fn payment_header(f: &Fixture) -> String {
     let b64 = base64::engine::general_purpose::STANDARD;
     let required: Value =
         serde_json::from_slice(&b64.decode(headers.get("payment-required").unwrap()).unwrap()).unwrap();
-    let payload = json!({"x402Version": 2, "accepted": required["accepts"][0], "resource": required["resource"], "payload": {"transaction": "AA=="}});
+    let payload = json!({"x402Version": 2, "accepted": required["accepts"][0], "resource": required["resource"], "payload": {"transaction": b64.encode(rand_seed().to_le_bytes())}});
 
     b64.encode(serde_json::to_vec(&payload).unwrap())
 }
@@ -304,7 +315,7 @@ async fn settled_payment_delivers_once_and_replays_are_rejected() {
         .and(path("/settle"))
         .respond_with(
             ResponseTemplate::new(200)
-                .set_body_json(json!({"success": true, "transaction": "5sig", "network": NETWORK, "payer": "payer1"})),
+                .set_body_json(json!({"success": true, "transaction": format!("sig{}", rand_seed()), "network": NETWORK, "payer": "payer1"})),
         )
         .mount(&server)
         .await;
@@ -327,9 +338,10 @@ async fn settled_payment_delivers_once_and_replays_are_rejected() {
 }
 
 fn hash_of(header: &str) -> String {
-    use sha2::Digest;
+    let mut headers = axum::http::HeaderMap::new();
+    headers.insert("payment-signature", header.parse().unwrap());
 
-    hex::encode(sha2::Sha256::digest(header.as_bytes()))
+    replicata_coordinator::payments::payment_hash(&headers).unwrap()
 }
 
 #[tokio::test]
@@ -379,4 +391,51 @@ async fn bundle_uploads_require_a_valid_signature() {
     assert_eq!(call(&f.app, upload("not-a-signature")).await.0, StatusCode::UNAUTHORIZED);
     let wrong = solana_signer::Signer::sign_message(&Keypair::new(), b"whatever").to_string();
     assert_eq!(call(&f.app, upload(&wrong)).await.0, StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn dataset_names_are_percent_decoded_and_unknown_files_cost_nothing() {
+    let server = facilitator().await;
+    Mock::given(method("POST"))
+        .and(path("/settle"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(
+            json!({"success": true, "transaction": format!("sig{}", rand_seed()), "network": NETWORK, "payer": "p"}),
+        ))
+        .mount(&server)
+        .await;
+    let f = fixture(&server.uri()).await;
+    let base = format!("/v1/experiments/{}/dataset", f.replicated);
+
+    assert_eq!(get(&f.app, &format!("{base}/missing.csv")).await.0, StatusCode::NOT_FOUND);
+    assert_eq!(get(&f.app, &format!("{base}/plots/run%201.csv")).await.0, StatusCode::PAYMENT_REQUIRED);
+    let req = Request::get(format!("{base}/plots/run%201.csv"))
+        .header("payment-signature", payment_header(&f).await)
+        .body(Body::empty())
+        .unwrap();
+    let (status, _, body) = call(&f.app, req).await;
+    assert_eq!(status, StatusCode::OK, "{}", String::from_utf8_lossy(&body));
+    assert_eq!(body, b"1,2\n");
+}
+
+#[tokio::test]
+async fn re_encoding_a_settled_payment_header_is_still_a_replay() {
+    let server = facilitator().await;
+    Mock::given(method("POST"))
+        .and(path("/settle"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(
+            json!({"success": true, "transaction": format!("sig{}", rand_seed()), "network": NETWORK, "payer": "p"}),
+        ))
+        .mount(&server)
+        .await;
+    let f = fixture(&server.uri()).await;
+    let header = payment_header(&f).await;
+    let (status, _, body) = paid_get(&f, &header).await;
+    assert_eq!(status, StatusCode::OK, "{}", String::from_utf8_lossy(&body));
+
+    // Same signed transaction, different JSON bytes (pretty-printed).
+    let b64 = base64::engine::general_purpose::STANDARD;
+    let payload: Value = serde_json::from_slice(&b64.decode(&header).unwrap()).unwrap();
+    let reencoded = b64.encode(serde_json::to_vec_pretty(&payload).unwrap());
+    assert_ne!(reencoded, header);
+    assert_eq!(paid_get(&f, &reencoded).await.0, StatusCode::CONFLICT);
 }

@@ -712,6 +712,11 @@
       "code": 6016,
       "name": "Overflow",
       "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6017,
+      "name": "BondForfeited",
+      "msg": "This bond was forfeited to the workers who revealed"
     }
   ],
   "types": [

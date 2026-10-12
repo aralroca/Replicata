@@ -35,18 +35,33 @@ pub async fn upsert_bundle(
     worker: &str,
     output_hash: &str,
     data: &[u8],
+    files: &[String],
 ) -> sqlx::Result<()> {
     sqlx::query(
-        "INSERT INTO bundles (experiment, worker, output_hash, data) VALUES ($1, $2, $3, $4)
-         ON CONFLICT (experiment, worker) DO UPDATE SET output_hash = EXCLUDED.output_hash, data = EXCLUDED.data, created_at = now()",
+        "INSERT INTO bundles (experiment, worker, output_hash, data, files) VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (experiment, worker) DO UPDATE
+         SET output_hash = EXCLUDED.output_hash, data = EXCLUDED.data, files = EXCLUDED.files, created_at = now()",
     )
     .bind(experiment)
     .bind(worker)
     .bind(output_hash)
     .bind(data)
+    .bind(files)
     .execute(pool)
     .await?;
     Ok(())
+}
+
+/// File names of a bundle of `experiment` with canonical hash `output_hash` (no blob loaded).
+pub async fn bundle_files(pool: &PgPool, experiment: &str, output_hash: &str) -> sqlx::Result<Option<Vec<String>>> {
+    let row =
+        sqlx::query("SELECT files FROM bundles WHERE experiment = $1 AND output_hash = $2 ORDER BY created_at LIMIT 1")
+            .bind(experiment)
+            .bind(output_hash)
+            .fetch_optional(pool)
+            .await?;
+
+    Ok(row.map(|row| row.get("files")))
 }
 
 /// `(experiment, worker)` pairs that have a bundle, for the given experiments.
@@ -91,7 +106,7 @@ pub async fn payment_exists(pool: &PgPool, payment_hash: &str) -> sqlx::Result<b
 pub async fn record_payment(pool: &PgPool, p: &Payment<'_>) -> sqlx::Result<bool> {
     let result = sqlx::query(
         "INSERT INTO payments (payment_hash, resource, payer, amount, pay_to, tx_signature)
-         VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (payment_hash) DO NOTHING",
+         VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING",
     )
     .bind(p.payment_hash)
     .bind(p.resource)

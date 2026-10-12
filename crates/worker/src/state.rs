@@ -14,8 +14,18 @@ pub enum Stage {
     Committed,
     Uploaded,
     Revealed,
-    /// The experiment could not be run (bad image, failed execution...). Nothing to reveal.
+    /// The experiment could not be run deterministically (non-zero exit, timeout, bad spec or
+    /// inputs). Retrying would fail the same way, so there is nothing to reveal.
     Failed,
+    /// Bond recovered with `withdraw_bond` (nobody revealed and the experiment is unresolved).
+    Withdrawn,
+}
+
+impl Stage {
+    /// Still needs work (claimed but not yet revealed).
+    pub fn in_progress(self) -> bool {
+        self < Stage::Revealed
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

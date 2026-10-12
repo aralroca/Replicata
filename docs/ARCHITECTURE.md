@@ -40,8 +40,10 @@ sequenceDiagram
 * `finalize` requires **every** revealed claim in `remaining_accounts` (validated: owner,
   discriminator, experiment, uniqueness, token account owner/mint, profile) so nobody can hide a
   dissenter. Replicated iff `reveals ≥ k` and the top hash has a strict majority of reveals.
-* Unrevealed bonds are confiscated when the experiment replicates and refundable
-  (`withdraw_bond`) when it does not. Indivisible remainders go to the author.
+* Unrevealed bonds are confiscated whenever someone revealed (to the agreeing workers if it
+  replicates, to the revealers otherwise — withholding a reveal is never a free veto) and are
+  refundable (`withdraw_bond`) only when nobody revealed. Indivisible remainders go to the author.
+* The crank recreates missing payout token accounts first, so closing one cannot block settlement.
 * `escrowed` tracks what the vault owes; anything above it is royalties. A property test runs
   random lifecycles and asserts conservation of funds.
 

@@ -22,18 +22,26 @@ use crate::routes::public::{parse_pubkey, snapshot_with};
 use crate::snapshot::now;
 use crate::state::AppState;
 
-/// The verified bundle of a replicated experiment, loaded by [`experiment_guard`].
+/// What [`experiment_guard`] checked: a replicated experiment with a stored verified bundle.
+/// Only metadata — the blob is loaded after payment.
 #[derive(Clone)]
 pub struct Verified {
     pub experiment: Pubkey,
     pub result_hash: String,
     pub price: u64,
-    pub bundle: Vec<u8>,
+    pub files: Vec<String>,
 }
 
 /// Experiment id from `/v1/experiments/{id}/...`.
 pub fn experiment_id(path: &str) -> Option<&str> {
     path.strip_prefix("/v1/experiments/")?.split('/').next()
+}
+
+/// Decoded file name from `/v1/experiments/{id}/dataset/{*file}` (same value axum's `Path` yields).
+pub fn dataset_name(path: &str) -> Option<String> {
+    let raw = path.split_once("/dataset/")?.1;
+
+    percent_encoding::percent_decode_str(raw).decode_utf8().ok().map(|name| name.into_owned())
 }
 
 async fn load_verified(state: &AppState, path: &str) -> ApiResult<Verified> {
@@ -48,34 +56,44 @@ async fn load_verified(state: &AppState, path: &str) -> ApiResult<Verified> {
         return Err(ApiError::conflict("not_replicated", "the experiment has not been replicated yet"));
     }
     let result_hash = to_hex(&exp.result_hash);
-    let bundle = db::bundle_with_hash(&state.db, &id.to_string(), &result_hash)
+    let files = db::bundle_files(&state.db, &id.to_string(), &result_hash)
         .await?
         .ok_or_else(|| ApiError::conflict("bundle_missing", "no replicator uploaded the verified bundle yet"))?;
 
-    Ok(Verified { experiment: id, result_hash, price: exp.access_price, bundle })
+    Ok(Verified { experiment: id, result_hash, price: exp.access_price, files })
 }
 
-fn dataset_file(verified: &Verified, file: &str) -> ApiResult<Vec<u8>> {
-    let files = bundle::unpack(&verified.bundle).map_err(anyhow::Error::from)?;
+async fn load_bundle(state: &AppState, verified: &Verified) -> ApiResult<Vec<u8>> {
+    db::bundle_with_hash(&state.db, &verified.experiment.to_string(), &verified.result_hash)
+        .await?
+        .ok_or_else(|| ApiError::conflict("bundle_missing", "the verified bundle disappeared"))
+}
+
+/// Unpacks off the async runtime (bundles can be large).
+async fn dataset_file(bundle: Vec<u8>, file: String) -> ApiResult<Vec<u8>> {
+    let files = tokio::task::spawn_blocking(move || bundle::unpack(&bundle))
+        .await
+        .map_err(anyhow::Error::from)?
+        .map_err(anyhow::Error::from)?;
 
     files
         .into_iter()
-        .find(|(name, _)| name == file)
+        .find(|(name, _)| *name == file)
         .map(|(_, bytes)| bytes)
         .ok_or_else(|| ApiError::not_found("dataset file"))
 }
 
-/// Pre-paywall guard for `result` and `dataset`: 404/409 without charging anything.
+/// Pre-paywall guard for `result` and `dataset`: 404/409 without charging anything, and without
+/// touching bundle blobs (unpaid requests stay cheap).
 pub async fn experiment_guard(State(state): State<AppState>, mut req: Request, next: Next) -> Response {
     let path = req.uri().path().to_string();
     let verified = match load_verified(&state, &path).await {
         Ok(verified) => verified,
         Err(err) => return err.into_response(),
     };
-    if let Some(file) = path.split("/dataset/").nth(1) {
-        if let Err(err) = dataset_file(&verified, file) {
-            return err.into_response();
-        }
+    let missing_file = path.contains("/dataset/") && !dataset_name(&path).is_some_and(|f| verified.files.contains(&f));
+    if missing_file {
+        return ApiError::not_found("dataset file").into_response();
     }
     req.extensions_mut().insert(verified);
     next.run(req).await
@@ -103,6 +121,7 @@ pub async fn result(
 ) -> ApiResult<Response> {
     let resource = format!("/v1/experiments/{}/result", verified.experiment);
     record_or_conflict(&state, &headers, &settle, &resource, verified.price, &verified.experiment).await?;
+    let bundle = load_bundle(&state, &verified).await?;
     let disposition = format!("attachment; filename=\"{}.tar.gz\"", verified.experiment);
 
     Ok((
@@ -114,7 +133,7 @@ pub async fn result(
                 HeaderValue::from_str(&verified.result_hash).map_err(anyhow::Error::from)?,
             ),
         ],
-        verified.bundle,
+        bundle,
     )
         .into_response())
 }
@@ -129,7 +148,9 @@ pub async fn dataset(
     let resource = format!("/v1/experiments/{}/dataset/{file}", verified.experiment);
     record_or_conflict(&state, &headers, &settle, &resource, verified.price, &verified.experiment).await?;
 
-    Ok(([(header::CONTENT_TYPE, "application/octet-stream")], dataset_file(&verified, &file)?).into_response())
+    let bytes = dataset_file(load_bundle(&state, &verified).await?, file).await?;
+
+    Ok(([(header::CONTENT_TYPE, "application/octet-stream")], bytes).into_response())
 }
 
 /// `POST /v1/experiments` body (agents publishing without a UI).

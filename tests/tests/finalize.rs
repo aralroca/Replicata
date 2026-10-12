@@ -105,27 +105,29 @@ fn a_tie_is_not_a_majority() {
 }
 
 #[test]
-fn fewer_than_k_reveals_is_unresolved_and_silent_workers_withdraw() {
+fn withholding_a_reveal_is_not_a_free_veto() {
     let mut env = Env::new();
+    let author_before = env.balance(&env.author.pubkey());
     let (experiment, workers) = env.with_claims(&Params::default(), 3);
     env.commit(&experiment, &workers[0], A).unwrap();
     env.commit(&experiment, &workers[1], A).unwrap();
-    env.advance(101);
+    env.commit(&experiment, &workers[2], B).unwrap();
     env.reveal(&experiment, &workers[0], A).unwrap();
     env.reveal(&experiment, &workers[1], A).unwrap();
 
     assert_program_err(env.finalize(&experiment, &pubkeys(&workers[..2])), ReplicataError::NotReadyToFinalize);
-    env.advance(100);
+    env.advance(201);
     env.finalize(&experiment, &pubkeys(&workers[..2])).unwrap();
 
+    // 2 reveals < k = 3 → no quorum, but the withholder forfeits its bond to the revealers.
     let exp = env.experiment(&experiment);
-    assert_eq!((exp.status, exp.escrowed), (ExperimentStatus::Unresolved, USDC));
-    assert_program_err(env.withdraw_bond(&experiment, &workers[0]), ReplicataError::InvalidClaimState);
-    env.withdraw_bond(&experiment, &workers[2]).unwrap();
-    assert_eq!(env.balance(&workers[2].pubkey()), 10 * USDC);
-    assert_eq!(env.experiment(&experiment).escrowed, 0);
+    assert_eq!((exp.status, exp.escrowed), (ExperimentStatus::Unresolved, 0));
+    assert_eq!(env.balance(&workers[0].pubkey()), 10 * USDC + USDC / 2);
+    assert_eq!(env.balance(&workers[1].pubkey()), 10 * USDC + USDC / 2);
+    assert_eq!(env.balance(&env.author.pubkey()), author_before, "reward refunded");
+    assert_program_err(env.withdraw_bond(&experiment, &workers[2]), ReplicataError::BondForfeited);
+    assert_eq!(env.balance(&workers[2].pubkey()), 9 * USDC);
     assert_eq!(env.token_amount(&env.vault(&experiment)), 0);
-    assert_program_err(env.withdraw_bond(&experiment, &workers[2]), ReplicataError::InvalidClaimState);
 }
 
 #[test]

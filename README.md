@@ -25,7 +25,7 @@ Reproducible verification is what is scarce — and today nobody is paid for it.
 |---|---|---|
 | **Escrow** | `create_experiment` locks the reward in a vault PDA; workers lock a bond in `claim` | Cheap, programmable USDC escrow without a custodian |
 | **Commit-reveal** | `commit(sha256(H ‖ salt ‖ worker))` then `reveal(H, salt)` | Nobody can copy someone else's result; the commitment binds the worker key |
-| **Settlement** | Permissionless `finalize`: strict majority ≥ k → pays reward + confiscated bonds to the agreeing workers; otherwise refunds | Trust-minimised payout, reputation (`WorkerProfile`) on-chain |
+| **Settlement** | Permissionless `finalize`: with ≥ k reveals and a strict majority agreeing → pays reward + confiscated bonds to the agreeing workers; otherwise refunds the author, and anyone who withheld a reveal forfeits its bond to those who revealed | Trust-minimised payout, reputation (`WorkerProfile`) on-chain |
 | **x402 royalties** | Paid access to the result settles USDC **into the experiment vault**; `claim_royalties` splits it (e.g. 70 % author / 30 % replicators) | Every access pays whoever produced *and* whoever verified |
 | **Agents** | `POST /v1/experiments` paid over x402 returns a transaction the agent signs | Agents publish and consume science without accounts |
 

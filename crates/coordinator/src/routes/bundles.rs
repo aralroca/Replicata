@@ -5,7 +5,7 @@ use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::Json;
 use replicata_client::{self as client, Claim, ClaimState, Pubkey};
-use replicata_core::{bundle, bundle_upload_message, from_hex, to_hex};
+use replicata_core::{bundle, bundle_upload_message, from_hex, hash_files, to_hex};
 use serde_json::{json, Value};
 use solana_signature::Signature;
 
@@ -41,6 +41,16 @@ async fn claim_state(state: &AppState, experiment: &Pubkey, worker: &Pubkey) -> 
     client::decode::<Claim>(&account.data).map(|claim| claim.state)
 }
 
+/// Canonical hash and file names of a bundle, computed off the async runtime.
+async fn inspect(body: Bytes) -> ApiResult<([u8; 32], Vec<String>)> {
+    let unpacked = tokio::task::spawn_blocking(move || bundle::unpack(&body)).await.map_err(anyhow::Error::from)?;
+    let files = unpacked.map_err(|e| ApiError::bad_request(format!("invalid bundle: {e}")))?;
+    let hash = hash_files(files.iter().map(|(n, b)| (n.as_str(), b.as_slice())))
+        .map_err(|e| ApiError::bad_request(format!("invalid bundle: {e}")))?;
+
+    Ok((hash, files.into_iter().map(|(name, _)| name).collect()))
+}
+
 pub async fn upload(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -61,10 +71,10 @@ pub async fn upload(
         }
     }
 
-    let actual = bundle::hash_bundle(&body).map_err(|e| ApiError::bad_request(format!("invalid bundle: {e}")))?;
+    let (actual, files) = inspect(body.clone()).await?;
     if actual != declared {
         return Err(ApiError::bad_request(format!("bundle hash {} does not match X-Output-Hash", to_hex(&actual))));
     }
-    db::upsert_bundle(&state.db, &experiment.to_string(), &worker.to_string(), &to_hex(&actual), &body).await?;
+    db::upsert_bundle(&state.db, &experiment.to_string(), &worker.to_string(), &to_hex(&actual), &body, &files).await?;
     Ok((StatusCode::CREATED, Json(json!({ "output_hash": to_hex(&actual) }))))
 }

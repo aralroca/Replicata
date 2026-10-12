@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use replicata_client::{self as client, Experiment, ProgramInstruction, Pubkey};
+use replicata_client::{self as client, Claim, Experiment, ProgramInstruction, Pubkey};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_commitment_config::CommitmentConfig;
 use solana_keypair::Keypair;
@@ -39,6 +39,20 @@ impl Chain {
         let account = self.rpc.get_account(id).await?;
 
         client::decode(&account.data).ok_or_else(|| anyhow::anyhow!("{id} is not a Replicata experiment"))
+    }
+
+    /// This worker's on-chain claim on `id`, if any (the source of truth when resuming).
+    pub async fn my_claim(&self, id: &Pubkey) -> anyhow::Result<Option<Claim>> {
+        let pda = client::claim_pda(id, &self.pubkey());
+        let accounts = self.rpc.get_multiple_accounts(&[pda]).await?;
+
+        Ok(accounts.into_iter().next().flatten().and_then(|a| client::decode(&a.data)))
+    }
+
+    pub async fn withdraw_bond(&self, id: &Pubkey) -> anyhow::Result<String> {
+        let exp = self.experiment(id).await?;
+
+        self.send(&[client::withdraw_bond(&self.pubkey(), id, &exp)]).await
     }
 
     pub async fn claim(&self, id: &Pubkey) -> anyhow::Result<String> {

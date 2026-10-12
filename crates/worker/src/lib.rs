@@ -3,6 +3,7 @@
 
 pub mod api;
 pub mod chain;
+pub mod daemon;
 pub mod inputs;
 pub mod job;
 pub mod pay;

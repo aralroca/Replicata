@@ -158,8 +158,11 @@ fn settle_replicated<'info>(
     Ok(())
 }
 
-/// No quorum: refund the reward and every revealed bond. Bonds of claims that never
-/// revealed stay escrowed until their worker calls `withdraw_bond`.
+/// No quorum: the reward goes back to the author and every revealed bond is returned.
+///
+/// If at least one worker revealed, the experiment was runnable, so claims that never revealed
+/// forfeit their bond to the workers who did (otherwise withholding a reveal would be a free
+/// veto that forces `Unresolved`). If nobody revealed, bonds stay escrowed for `withdraw_bond`.
 fn settle_unresolved<'info>(
     experiment: &mut Account<'info, Experiment>,
     vault: &InterfaceAccount<'info, TokenAccount>,
@@ -173,15 +176,22 @@ fn settle_unresolved<'info>(
     let bond = experiment.bond;
     let reward = experiment.reward;
 
-    payer.pay(&author.to_account_info(), reward)?;
+    let revealed_bonds = bond.checked_mul(revealed.len() as u64).ok_or(ReplicataError::Overflow)?;
+    let forfeited = match revealed.len() {
+        0 => 0,
+        _ => experiment.escrowed.checked_sub(reward + revealed_bonds).ok_or(ReplicataError::Overflow)?,
+    };
+    let share = forfeited.checked_div(revealed.len() as u64).unwrap_or(0);
+    let dust = forfeited - share * revealed.len() as u64;
+
+    payer.pay(&author.to_account_info(), reward + dust)?;
     for r in revealed.iter_mut() {
-        payer.pay(r.token_account, bond)?;
+        payer.pay(r.token_account, bond + share)?;
         r.claim.state = ClaimState::Refunded;
     }
-    let refunded =
-        bond.checked_mul(revealed.len() as u64).and_then(|b| b.checked_add(reward)).ok_or(ReplicataError::Overflow)?;
+    let settled = reward + revealed_bonds + forfeited;
 
-    experiment.escrowed = experiment.escrowed.checked_sub(refunded).ok_or(ReplicataError::Overflow)?;
+    experiment.escrowed = experiment.escrowed.checked_sub(settled).ok_or(ReplicataError::Overflow)?;
     experiment.status = ExperimentStatus::Unresolved;
     Ok(())
 }

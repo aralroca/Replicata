@@ -9,7 +9,7 @@ use replicata_worker::api::Coordinator;
 use replicata_worker::chain::Chain;
 use replicata_worker::job::Worker;
 use replicata_worker::state::Stage;
-use replicata_worker::{home, load_or_create_keypair, pay};
+use replicata_worker::{daemon, home, load_or_create_keypair, pay};
 use solana_signer::Signer;
 
 #[derive(Parser)]
@@ -68,6 +68,8 @@ enum Command {
         /// JSON body of POST /v1/experiments without `authority` (filled with this keypair).
         request: PathBuf,
     },
+    /// Recover your bond from an unresolved experiment that nobody revealed.
+    Withdraw { id: String },
 }
 
 impl ExitAfter {
@@ -141,15 +143,14 @@ async fn run(cli: &Cli, once: Option<String>, chaos: bool, exit_after: Option<Ex
         return Ok(());
     }
     println!("worker {me} polling {} …", api.base);
-    loop {
-        let open = api.experiments("status=open&phase=claiming").await.unwrap_or_default();
-        for exp in open.iter().filter(|e| e.claims_count < e.max_claims && e.claim_of(&me).is_none()) {
-            if let Err(err) = worker.process(&exp.id).await {
-                eprintln!("[{}] {err:#}", exp.id);
-            }
-        }
-        tokio::time::sleep(Duration::from_secs(3)).await;
-    }
+    daemon::run_forever(Arc::new(worker), Duration::from_secs(3)).await;
+    Ok(())
+}
+
+async fn withdraw(cli: &Cli, id: &str) -> anyhow::Result<()> {
+    let (api, chain) = connect(cli).await?;
+
+    worker(api, chain, false, None).withdraw(id).await.map(|_| ())
 }
 
 async fn buy(cli: &Cli, id: &str, output: Option<PathBuf>) -> anyhow::Result<()> {
@@ -194,5 +195,6 @@ async fn main() -> anyhow::Result<()> {
         Command::Verify { bundle, expected } => verify(bundle.clone(), expected.clone()),
         Command::Buy { id, output } => buy(&cli, id, output.clone()).await,
         Command::Publish { request } => publish(&cli, request.clone()).await,
+        Command::Withdraw { id } => withdraw(&cli, id).await,
     }
 }

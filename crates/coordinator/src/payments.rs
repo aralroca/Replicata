@@ -39,7 +39,20 @@ pub fn price_tag(cfg: &Config, pay_to: Pubkey, amount: u64) -> v2::PriceTag {
 
 /// Stable id of a payment: sha256 of the `PAYMENT-SIGNATURE` header value.
 pub fn payment_hash(headers: &HeaderMap) -> Option<String> {
-    headers.get(PAYMENT_HEADER).map(|v| hex::encode(Sha256::digest(v.as_bytes())))
+    let header = headers.get(PAYMENT_HEADER)?.to_str().ok()?;
+    let identity = payment_transaction(header).unwrap_or_else(|| header.as_bytes().to_vec());
+
+    Some(hex::encode(Sha256::digest(identity)))
+}
+
+/// Raw bytes of the signed payment transaction inside a V2 header. Keying replays on them (not on
+/// the header text) means re-encoding the JSON cannot turn an old payment into a "new" one; every
+/// genuine x402 payment differs anyway because the client adds a random memo.
+fn payment_transaction(header: &str) -> Option<Vec<u8>> {
+    let b64 = base64::engine::general_purpose::STANDARD;
+    let payload: Value = serde_json::from_slice(&b64.decode(header).ok()?).ok()?;
+
+    b64.decode(payload.get("payload")?.get("transaction")?.as_str()?).ok()
 }
 
 /// Rejects a payment that was already settled and recorded (409) before touching the facilitator.
@@ -127,10 +140,7 @@ fn failure_body(failure: &Failure, message: &str, faucet: &str) -> Value {
 
 /// `(source token account, amount)` of the `transfer_checked` inside an x402 payment header.
 pub fn payment_transfer(header: &str) -> Option<(Pubkey, u64)> {
-    let b64 = base64::engine::general_purpose::STANDARD;
-    let payload: Value = serde_json::from_slice(&b64.decode(header).ok()?).ok()?;
-    let tx_bytes = b64.decode(payload.get("payload")?.get("transaction")?.as_str()?).ok()?;
-    let tx: VersionedTransaction = bincode::deserialize(&tx_bytes).ok()?;
+    let tx: VersionedTransaction = bincode::deserialize(&payment_transaction(header)?).ok()?;
     let keys = tx.message.static_account_keys();
     let transfer = tx.message.instructions().iter().find(|ix| {
         let program = keys.get(ix.program_id_index as usize);
