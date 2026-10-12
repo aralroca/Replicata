@@ -10,21 +10,29 @@ import type { ExperimentView } from "@/lib/types";
 
 type Props = { experiment: ExperimentView };
 
-function buttonLabel(experiment: ExperimentView, pending: boolean): string {
-  return pending ? "Paying…" : `Get verified result (${formatPrice(experiment.access_price)})`;
+type PayProps = Props & { account: UiWalletAccount; chain: `solana:${string}` };
+
+type BuyButtonProps = Props & { pending?: boolean; disabled: boolean; onClick?: () => void };
+
+function BuyButton({ experiment, pending, disabled, onClick }: BuyButtonProps) {
+  const label = pending ? "Paying…" : `Get verified result (${formatPrice(experiment.access_price)})`;
+
+  return (
+    <button type="button" className="btn btn-primary w-fit" disabled={disabled} onClick={onClick}>
+      {label}
+    </button>
+  );
 }
 
-function PayButton({ experiment, account, chain }: Props & { account: UiWalletAccount; chain: `solana:${string}` }) {
+function PayButton({ experiment, account, chain }: PayProps) {
   const signer = useWalletAccountTransactionSigner(account, chain);
-  const { pending, error, downloaded, ready, buy } = useBuyResult(experiment.id, signer);
+  const { pending, error, downloaded, ready, buy } = useBuyResult(experiment, signer);
 
   return (
     <div className="grid gap-3">
-      <button type="button" className="btn btn-primary w-fit" disabled={!ready || pending} onClick={buy}>
-        {buttonLabel(experiment, pending)}
-      </button>
+      <BuyButton experiment={experiment} pending={pending} disabled={!ready || pending} onClick={buy} />
       {error && <ErrorAlert error={error} />}
-      {downloaded && <p role="status">Downloaded {downloaded}. Verify it with `replicata verify`.</p>}
+      {downloaded && <p role="status">Downloaded {downloaded}. Check it with `replicata verify`.</p>}
     </div>
   );
 }
@@ -32,9 +40,7 @@ function PayButton({ experiment, account, chain }: Props & { account: UiWalletAc
 function ConnectFirst({ experiment }: Props) {
   return (
     <div className="grid gap-2">
-      <button type="button" className="btn btn-primary w-fit" disabled>
-        {buttonLabel(experiment, false)}
-      </button>
+      <BuyButton experiment={experiment} disabled />
       <p className="text-sm text-muted">
         Connect a wallet (top right) to pay with USDC. New here? <Link href="/start">Get set up in 60 s</Link>.
       </p>

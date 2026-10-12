@@ -2,3 +2,8 @@ packages:
   - apps/*
 allowBuilds:
   unrs-resolver: false
+# One Wallet Standard UI registry: @solana/react 6.1 pins 1.0.1 while @wallet-standard/react
+# uses 1.1.1; two copies make wallet-ui signer hooks throw WALLET_NOT_FOUND (#3834000).
+overrides:
+  "@wallet-standard/ui-registry": 1.1.1
+  "@wallet-standard/ui": 1.0.3

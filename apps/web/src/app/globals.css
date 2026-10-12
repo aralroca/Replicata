@@ -34,7 +34,7 @@
   }
 
   a {
-    @apply text-accent underline-offset-2 hover:underline;
+    @apply text-accent underline underline-offset-2 hover:no-underline;
   }
 
   :focus-visible {
@@ -48,7 +48,7 @@
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold no-underline transition disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-primary {

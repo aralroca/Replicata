@@ -51,9 +51,7 @@ import {
   type ExperimentStatusArgs,
 } from "../types";
 
-export const EXPERIMENT_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([
-  93, 88, 219, 4, 130, 32, 125, 30,
-]);
+export const EXPERIMENT_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([93, 88, 219, 4, 130, 32, 125, 30]);
 
 export function getExperimentDiscriminatorBytes(): ReadonlyUint8Array {
   return fixEncoderSize(getBytesEncoder(), 8).encode(EXPERIMENT_DISCRIMINATOR);
@@ -194,10 +192,7 @@ export function getExperimentDecoder(): FixedSizeDecoder<Experiment> {
 }
 
 /** Gets the codec for {@link Experiment} account data. */
-export function getExperimentCodec(): FixedSizeCodec<
-  ExperimentArgs,
-  Experiment
-> {
+export function getExperimentCodec(): FixedSizeCodec<ExperimentArgs, Experiment> {
   return combineCodec(getExperimentEncoder(), getExperimentDecoder());
 }
 
@@ -210,10 +205,7 @@ export function decodeExperiment<TAddress extends string = string>(
 export function decodeExperiment<TAddress extends string = string>(
   encodedAccount: EncodedAccount<TAddress> | MaybeEncodedAccount<TAddress>
 ): Account<Experiment, TAddress> | MaybeAccount<Experiment, TAddress> {
-  return decodeAccount(
-    encodedAccount as MaybeEncodedAccount<TAddress>,
-    getExperimentDecoder()
-  );
+  return decodeAccount(encodedAccount as MaybeEncodedAccount<TAddress>, getExperimentDecoder());
 }
 
 export async function fetchExperiment<TAddress extends string = string>(

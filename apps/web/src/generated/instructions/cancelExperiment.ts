@@ -41,13 +41,10 @@ import {
 } from "@solana/kit/program-client-core";
 import { REPLICATA_PROGRAM_ADDRESS } from "../programs";
 
-export const CANCEL_EXPERIMENT_DISCRIMINATOR: ReadonlyUint8Array =
-  new Uint8Array([45, 178, 175, 221, 94, 34, 54, 126]);
+export const CANCEL_EXPERIMENT_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([45, 178, 175, 221, 94, 34, 54, 126]);
 
 export function getCancelExperimentDiscriminatorBytes(): ReadonlyUint8Array {
-  return fixEncoderSize(getBytesEncoder(), 8).encode(
-    CANCEL_EXPERIMENT_DISCRIMINATOR
-  );
+  return fixEncoderSize(getBytesEncoder(), 8).encode(CANCEL_EXPERIMENT_DISCRIMINATOR);
 }
 
 export type CancelExperimentInstruction<
@@ -57,63 +54,46 @@ export type CancelExperimentInstruction<
   TAccountMint extends string | AccountMeta<string> = string,
   TAccountVault extends string | AccountMeta<string> = string,
   TAccountAuthorityTokenAccount extends string | AccountMeta<string> = string,
-  TAccountTokenProgram extends string | AccountMeta<string> =
-    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+  TAccountTokenProgram extends string | AccountMeta<string> = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
   InstructionWithAccounts<
     [
       TAccountAuthority extends string
-        ? ReadonlySignerAccount<TAccountAuthority> &
-            AccountSignerMeta<TAccountAuthority>
+        ? ReadonlySignerAccount<TAccountAuthority> & AccountSignerMeta<TAccountAuthority>
         : TAccountAuthority,
-      TAccountExperiment extends string
-        ? WritableAccount<TAccountExperiment>
-        : TAccountExperiment,
-      TAccountMint extends string
-        ? ReadonlyAccount<TAccountMint>
-        : TAccountMint,
-      TAccountVault extends string
-        ? WritableAccount<TAccountVault>
-        : TAccountVault,
+      TAccountExperiment extends string ? WritableAccount<TAccountExperiment> : TAccountExperiment,
+      TAccountMint extends string ? ReadonlyAccount<TAccountMint> : TAccountMint,
+      TAccountVault extends string ? WritableAccount<TAccountVault> : TAccountVault,
       TAccountAuthorityTokenAccount extends string
         ? WritableAccount<TAccountAuthorityTokenAccount>
         : TAccountAuthorityTokenAccount,
-      TAccountTokenProgram extends string
-        ? ReadonlyAccount<TAccountTokenProgram>
-        : TAccountTokenProgram,
+      TAccountTokenProgram extends string ? ReadonlyAccount<TAccountTokenProgram> : TAccountTokenProgram,
       ...TRemainingAccounts,
     ]
   >;
 
-export type CancelExperimentInstructionData = {
-  discriminator: ReadonlyUint8Array;
-};
+export type CancelExperimentInstructionData = { discriminator: ReadonlyUint8Array };
 
 export type CancelExperimentInstructionDataArgs = {};
 
 export function getCancelExperimentInstructionDataEncoder(): FixedSizeEncoder<CancelExperimentInstructionDataArgs> {
-  return transformEncoder(
-    getStructEncoder([["discriminator", fixEncoderSize(getBytesEncoder(), 8)]]),
-    (value) => ({ ...value, discriminator: CANCEL_EXPERIMENT_DISCRIMINATOR })
-  );
+  return transformEncoder(getStructEncoder([["discriminator", fixEncoderSize(getBytesEncoder(), 8)]]), (value) => ({
+    ...value,
+    discriminator: CANCEL_EXPERIMENT_DISCRIMINATOR,
+  }));
 }
 
 export function getCancelExperimentInstructionDataDecoder(): FixedSizeDecoder<CancelExperimentInstructionData> {
-  return getStructDecoder([
-    ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
-  ]);
+  return getStructDecoder([["discriminator", fixDecoderSize(getBytesDecoder(), 8)]]);
 }
 
 export function getCancelExperimentInstructionDataCodec(): FixedSizeCodec<
   CancelExperimentInstructionDataArgs,
   CancelExperimentInstructionData
 > {
-  return combineCodec(
-    getCancelExperimentInstructionDataEncoder(),
-    getCancelExperimentInstructionDataDecoder()
-  );
+  return combineCodec(getCancelExperimentInstructionDataEncoder(), getCancelExperimentInstructionDataDecoder());
 }
 
 export type CancelExperimentInput<
@@ -121,10 +101,8 @@ export type CancelExperimentInput<
   TAccountExperiment extends InstructionAccountInput = InstructionAccountInput,
   TAccountMint extends InstructionAccountInput = InstructionAccountInput,
   TAccountVault extends InstructionAccountInput = InstructionAccountInput,
-  TAccountAuthorityTokenAccount extends InstructionAccountInput =
-    InstructionAccountInput,
-  TAccountTokenProgram extends InstructionAccountInput =
-    InstructionAccountInput,
+  TAccountAuthorityTokenAccount extends InstructionAccountInput = InstructionAccountInput,
+  TAccountTokenProgram extends InstructionAccountInput = InstructionAccountInput,
 > = {
   authority: TAccountAuthority;
   experiment: TAccountExperiment;
@@ -154,30 +132,15 @@ export function getCancelExperimentInstruction<
   config?: { programAddress?: TProgramAddress }
 ): CancelExperimentInstruction<
   TProgramAddress,
-  ResolvedInstructionAccountMeta<
-    TAccountAuthority,
-    InstructionAccountInputAddress<TAccountAuthority>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountExperiment,
-    InstructionAccountInputAddress<TAccountExperiment>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountMint,
-    InstructionAccountInputAddress<TAccountMint>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountVault,
-    InstructionAccountInputAddress<TAccountVault>
-  >,
+  ResolvedInstructionAccountMeta<TAccountAuthority, InstructionAccountInputAddress<TAccountAuthority>>,
+  ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+  ResolvedInstructionAccountMeta<TAccountMint, InstructionAccountInputAddress<TAccountMint>>,
+  ResolvedInstructionAccountMeta<TAccountVault, InstructionAccountInputAddress<TAccountVault>>,
   ResolvedInstructionAccountMeta<
     TAccountAuthorityTokenAccount,
     InstructionAccountInputAddress<TAccountAuthorityTokenAccount>
   >,
-  ResolvedInstructionAccountMeta<
-    TAccountTokenProgram,
-    InstructionAccountInputAddress<TAccountTokenProgram>
-  >
+  ResolvedInstructionAccountMeta<TAccountTokenProgram, InstructionAccountInputAddress<TAccountTokenProgram>>
 > {
   // Program address.
   const programAddress = config?.programAddress ?? REPLICATA_PROGRAM_ADDRESS;
@@ -187,33 +150,14 @@ export function getCancelExperimentInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    authority: {
-      value: input.authority ?? null,
-      isSigner: true,
-      isWritable: false,
-    },
-    experiment: {
-      value: input.experiment ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
+    authority: { value: input.authority ?? null, isSigner: true, isWritable: false },
+    experiment: { value: input.experiment ?? null, isSigner: false, isWritable: true },
     mint: { value: input.mint ?? null, isSigner: false, isWritable: false },
     vault: { value: input.vault ?? null, isSigner: false, isWritable: true },
-    authorityTokenAccount: {
-      value: input.authorityTokenAccount ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
-    tokenProgram: {
-      value: input.tokenProgram ?? null,
-      isSigner: false,
-      isWritable: false,
-    },
+    authorityTokenAccount: { value: input.authorityTokenAccount ?? null, isSigner: false, isWritable: true },
+    tokenProgram: { value: input.tokenProgram ?? null, isSigner: false, isWritable: false },
   };
-  const accounts = originalAccounts as Record<
-    keyof typeof originalAccounts,
-    ResolvedInstructionAccount
-  >;
+  const accounts = originalAccounts as Record<keyof typeof originalAccounts, ResolvedInstructionAccount>;
 
   // Resolve default values.
   if (!accounts.tokenProgram.value) {
@@ -234,30 +178,15 @@ export function getCancelExperimentInstruction<
     programAddress,
   } as CancelExperimentInstruction<
     TProgramAddress,
-    ResolvedInstructionAccountMeta<
-      TAccountAuthority,
-      InstructionAccountInputAddress<TAccountAuthority>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountExperiment,
-      InstructionAccountInputAddress<TAccountExperiment>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountMint,
-      InstructionAccountInputAddress<TAccountMint>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountVault,
-      InstructionAccountInputAddress<TAccountVault>
-    >,
+    ResolvedInstructionAccountMeta<TAccountAuthority, InstructionAccountInputAddress<TAccountAuthority>>,
+    ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+    ResolvedInstructionAccountMeta<TAccountMint, InstructionAccountInputAddress<TAccountMint>>,
+    ResolvedInstructionAccountMeta<TAccountVault, InstructionAccountInputAddress<TAccountVault>>,
     ResolvedInstructionAccountMeta<
       TAccountAuthorityTokenAccount,
       InstructionAccountInputAddress<TAccountAuthorityTokenAccount>
     >,
-    ResolvedInstructionAccountMeta<
-      TAccountTokenProgram,
-      InstructionAccountInputAddress<TAccountTokenProgram>
-    >
+    ResolvedInstructionAccountMeta<TAccountTokenProgram, InstructionAccountInputAddress<TAccountTokenProgram>>
   >);
 }
 
@@ -277,22 +206,14 @@ export type ParsedCancelExperimentInstruction<
   data: CancelExperimentInstructionData;
 };
 
-export function parseCancelExperimentInstruction<
-  TProgram extends string,
-  TAccountMetas extends readonly AccountMeta[],
->(
-  instruction: Instruction<TProgram> &
-    InstructionWithAccounts<TAccountMetas> &
-    InstructionWithData<ReadonlyUint8Array>
+export function parseCancelExperimentInstruction<TProgram extends string, TAccountMetas extends readonly AccountMeta[]>(
+  instruction: Instruction<TProgram> & InstructionWithAccounts<TAccountMetas> & InstructionWithData<ReadonlyUint8Array>
 ): ParsedCancelExperimentInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 6) {
-    throw new SolanaError(
-      SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
-      {
-        actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 6,
-      }
-    );
+    throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS, {
+      actualAccountMetas: instruction.accounts.length,
+      expectedAccountMetas: 6,
+    });
   }
   let accountIndex = 0;
   const getNextAccount = () => {

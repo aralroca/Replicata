@@ -38,16 +38,9 @@ import {
   type MaybeEncodedAccount,
   type ReadonlyUint8Array,
 } from "@solana/kit";
-import {
-  getClaimStateDecoder,
-  getClaimStateEncoder,
-  type ClaimState,
-  type ClaimStateArgs,
-} from "../types";
+import { getClaimStateDecoder, getClaimStateEncoder, type ClaimState, type ClaimStateArgs } from "../types";
 
-export const CLAIM_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([
-  155, 70, 22, 176, 123, 215, 246, 102,
-]);
+export const CLAIM_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([155, 70, 22, 176, 123, 215, 246, 102]);
 
 export function getClaimDiscriminatorBytes(): ReadonlyUint8Array {
   return fixEncoderSize(getBytesEncoder(), 8).encode(CLAIM_DISCRIMINATOR);
@@ -123,10 +116,7 @@ export function decodeClaim<TAddress extends string = string>(
 export function decodeClaim<TAddress extends string = string>(
   encodedAccount: EncodedAccount<TAddress> | MaybeEncodedAccount<TAddress>
 ): Account<Claim, TAddress> | MaybeAccount<Claim, TAddress> {
-  return decodeAccount(
-    encodedAccount as MaybeEncodedAccount<TAddress>,
-    getClaimDecoder()
-  );
+  return decodeAccount(encodedAccount as MaybeEncodedAccount<TAddress>, getClaimDecoder());
 }
 
 export async function fetchClaim<TAddress extends string = string>(

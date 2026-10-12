@@ -41,14 +41,10 @@ import {
   type ReadonlyUint8Array,
 } from "@solana/kit";
 
-export const WORKER_PROFILE_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([
-  40, 244, 208, 98, 69, 236, 70, 229,
-]);
+export const WORKER_PROFILE_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([40, 244, 208, 98, 69, 236, 70, 229]);
 
 export function getWorkerProfileDiscriminatorBytes(): ReadonlyUint8Array {
-  return fixEncoderSize(getBytesEncoder(), 8).encode(
-    WORKER_PROFILE_DISCRIMINATOR
-  );
+  return fixEncoderSize(getBytesEncoder(), 8).encode(WORKER_PROFILE_DISCRIMINATOR);
 }
 
 export type WorkerProfile = {
@@ -100,10 +96,7 @@ export function getWorkerProfileDecoder(): FixedSizeDecoder<WorkerProfile> {
 }
 
 /** Gets the codec for {@link WorkerProfile} account data. */
-export function getWorkerProfileCodec(): FixedSizeCodec<
-  WorkerProfileArgs,
-  WorkerProfile
-> {
+export function getWorkerProfileCodec(): FixedSizeCodec<WorkerProfileArgs, WorkerProfile> {
   return combineCodec(getWorkerProfileEncoder(), getWorkerProfileDecoder());
 }
 
@@ -116,10 +109,7 @@ export function decodeWorkerProfile<TAddress extends string = string>(
 export function decodeWorkerProfile<TAddress extends string = string>(
   encodedAccount: EncodedAccount<TAddress> | MaybeEncodedAccount<TAddress>
 ): Account<WorkerProfile, TAddress> | MaybeAccount<WorkerProfile, TAddress> {
-  return decodeAccount(
-    encodedAccount as MaybeEncodedAccount<TAddress>,
-    getWorkerProfileDecoder()
-  );
+  return decodeAccount(encodedAccount as MaybeEncodedAccount<TAddress>, getWorkerProfileDecoder());
 }
 
 export async function fetchWorkerProfile<TAddress extends string = string>(
@@ -146,11 +136,7 @@ export async function fetchAllWorkerProfile(
   addresses: Array<Address>,
   config?: FetchAccountsConfig
 ): Promise<Account<WorkerProfile>[]> {
-  const maybeAccounts = await fetchAllMaybeWorkerProfile(
-    rpc,
-    addresses,
-    config
-  );
+  const maybeAccounts = await fetchAllMaybeWorkerProfile(rpc, addresses, config);
   assertAccountsExist(maybeAccounts);
   return maybeAccounts;
 }

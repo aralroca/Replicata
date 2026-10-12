@@ -43,14 +43,10 @@ import {
 import { findClaimPda } from "../pdas";
 import { REPLICATA_PROGRAM_ADDRESS } from "../programs";
 
-export const WITHDRAW_BOND_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([
-  222, 199, 141, 31, 188, 93, 155, 40,
-]);
+export const WITHDRAW_BOND_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([222, 199, 141, 31, 188, 93, 155, 40]);
 
 export function getWithdrawBondDiscriminatorBytes(): ReadonlyUint8Array {
-  return fixEncoderSize(getBytesEncoder(), 8).encode(
-    WITHDRAW_BOND_DISCRIMINATOR
-  );
+  return fixEncoderSize(getBytesEncoder(), 8).encode(WITHDRAW_BOND_DISCRIMINATOR);
 }
 
 export type WithdrawBondInstruction<
@@ -61,35 +57,23 @@ export type WithdrawBondInstruction<
   TAccountMint extends string | AccountMeta<string> = string,
   TAccountVault extends string | AccountMeta<string> = string,
   TAccountWorkerTokenAccount extends string | AccountMeta<string> = string,
-  TAccountTokenProgram extends string | AccountMeta<string> =
-    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+  TAccountTokenProgram extends string | AccountMeta<string> = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
   InstructionWithAccounts<
     [
       TAccountWorker extends string
-        ? ReadonlySignerAccount<TAccountWorker> &
-            AccountSignerMeta<TAccountWorker>
+        ? ReadonlySignerAccount<TAccountWorker> & AccountSignerMeta<TAccountWorker>
         : TAccountWorker,
-      TAccountExperiment extends string
-        ? WritableAccount<TAccountExperiment>
-        : TAccountExperiment,
-      TAccountClaim extends string
-        ? WritableAccount<TAccountClaim>
-        : TAccountClaim,
-      TAccountMint extends string
-        ? ReadonlyAccount<TAccountMint>
-        : TAccountMint,
-      TAccountVault extends string
-        ? WritableAccount<TAccountVault>
-        : TAccountVault,
+      TAccountExperiment extends string ? WritableAccount<TAccountExperiment> : TAccountExperiment,
+      TAccountClaim extends string ? WritableAccount<TAccountClaim> : TAccountClaim,
+      TAccountMint extends string ? ReadonlyAccount<TAccountMint> : TAccountMint,
+      TAccountVault extends string ? WritableAccount<TAccountVault> : TAccountVault,
       TAccountWorkerTokenAccount extends string
         ? WritableAccount<TAccountWorkerTokenAccount>
         : TAccountWorkerTokenAccount,
-      TAccountTokenProgram extends string
-        ? ReadonlyAccount<TAccountTokenProgram>
-        : TAccountTokenProgram,
+      TAccountTokenProgram extends string ? ReadonlyAccount<TAccountTokenProgram> : TAccountTokenProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -99,26 +83,21 @@ export type WithdrawBondInstructionData = { discriminator: ReadonlyUint8Array };
 export type WithdrawBondInstructionDataArgs = {};
 
 export function getWithdrawBondInstructionDataEncoder(): FixedSizeEncoder<WithdrawBondInstructionDataArgs> {
-  return transformEncoder(
-    getStructEncoder([["discriminator", fixEncoderSize(getBytesEncoder(), 8)]]),
-    (value) => ({ ...value, discriminator: WITHDRAW_BOND_DISCRIMINATOR })
-  );
+  return transformEncoder(getStructEncoder([["discriminator", fixEncoderSize(getBytesEncoder(), 8)]]), (value) => ({
+    ...value,
+    discriminator: WITHDRAW_BOND_DISCRIMINATOR,
+  }));
 }
 
 export function getWithdrawBondInstructionDataDecoder(): FixedSizeDecoder<WithdrawBondInstructionData> {
-  return getStructDecoder([
-    ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
-  ]);
+  return getStructDecoder([["discriminator", fixDecoderSize(getBytesDecoder(), 8)]]);
 }
 
 export function getWithdrawBondInstructionDataCodec(): FixedSizeCodec<
   WithdrawBondInstructionDataArgs,
   WithdrawBondInstructionData
 > {
-  return combineCodec(
-    getWithdrawBondInstructionDataEncoder(),
-    getWithdrawBondInstructionDataDecoder()
-  );
+  return combineCodec(getWithdrawBondInstructionDataEncoder(), getWithdrawBondInstructionDataDecoder());
 }
 
 export type WithdrawBondAsyncInput<
@@ -127,10 +106,8 @@ export type WithdrawBondAsyncInput<
   TAccountClaim extends InstructionAccountInput = InstructionAccountInput,
   TAccountMint extends InstructionAccountInput = InstructionAccountInput,
   TAccountVault extends InstructionAccountInput = InstructionAccountInput,
-  TAccountWorkerTokenAccount extends InstructionAccountInput =
-    InstructionAccountInput,
-  TAccountTokenProgram extends InstructionAccountInput =
-    InstructionAccountInput,
+  TAccountWorkerTokenAccount extends InstructionAccountInput = InstructionAccountInput,
+  TAccountTokenProgram extends InstructionAccountInput = InstructionAccountInput,
 > = {
   worker: TAccountWorker;
   experiment: TAccountExperiment;
@@ -164,34 +141,16 @@ export async function getWithdrawBondInstructionAsync<
 ): Promise<
   WithdrawBondInstruction<
     TProgramAddress,
-    ResolvedInstructionAccountMeta<
-      TAccountWorker,
-      InstructionAccountInputAddress<TAccountWorker>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountExperiment,
-      InstructionAccountInputAddress<TAccountExperiment>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountClaim,
-      InstructionAccountInputAddress<TAccountClaim>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountMint,
-      InstructionAccountInputAddress<TAccountMint>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountVault,
-      InstructionAccountInputAddress<TAccountVault>
-    >,
+    ResolvedInstructionAccountMeta<TAccountWorker, InstructionAccountInputAddress<TAccountWorker>>,
+    ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+    ResolvedInstructionAccountMeta<TAccountClaim, InstructionAccountInputAddress<TAccountClaim>>,
+    ResolvedInstructionAccountMeta<TAccountMint, InstructionAccountInputAddress<TAccountMint>>,
+    ResolvedInstructionAccountMeta<TAccountVault, InstructionAccountInputAddress<TAccountVault>>,
     ResolvedInstructionAccountMeta<
       TAccountWorkerTokenAccount,
       InstructionAccountInputAddress<TAccountWorkerTokenAccount>
     >,
-    ResolvedInstructionAccountMeta<
-      TAccountTokenProgram,
-      InstructionAccountInputAddress<TAccountTokenProgram>
-    >
+    ResolvedInstructionAccountMeta<TAccountTokenProgram, InstructionAccountInputAddress<TAccountTokenProgram>>
   >
 > {
   // Program address.
@@ -203,42 +162,21 @@ export async function getWithdrawBondInstructionAsync<
   // Original accounts.
   const originalAccounts = {
     worker: { value: input.worker ?? null, isSigner: true, isWritable: false },
-    experiment: {
-      value: input.experiment ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
+    experiment: { value: input.experiment ?? null, isSigner: false, isWritable: true },
     claim: { value: input.claim ?? null, isSigner: false, isWritable: true },
     mint: { value: input.mint ?? null, isSigner: false, isWritable: false },
     vault: { value: input.vault ?? null, isSigner: false, isWritable: true },
-    workerTokenAccount: {
-      value: input.workerTokenAccount ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
-    tokenProgram: {
-      value: input.tokenProgram ?? null,
-      isSigner: false,
-      isWritable: false,
-    },
+    workerTokenAccount: { value: input.workerTokenAccount ?? null, isSigner: false, isWritable: true },
+    tokenProgram: { value: input.tokenProgram ?? null, isSigner: false, isWritable: false },
   };
-  const accounts = originalAccounts as Record<
-    keyof typeof originalAccounts,
-    ResolvedInstructionAccount
-  >;
+  const accounts = originalAccounts as Record<keyof typeof originalAccounts, ResolvedInstructionAccount>;
 
   // Resolve default values.
   if (!accounts.claim.value) {
     accounts.claim.value = await findClaimPda(
       {
-        experiment: getAddressFromResolvedInstructionAccount(
-          "experiment",
-          accounts.experiment.value
-        ),
-        worker: getAddressFromResolvedInstructionAccount(
-          "worker",
-          accounts.worker.value
-        ),
+        experiment: getAddressFromResolvedInstructionAccount("experiment", accounts.experiment.value),
+        worker: getAddressFromResolvedInstructionAccount("worker", accounts.worker.value),
       },
       { programAddress }
     );
@@ -262,34 +200,16 @@ export async function getWithdrawBondInstructionAsync<
     programAddress,
   } as WithdrawBondInstruction<
     TProgramAddress,
-    ResolvedInstructionAccountMeta<
-      TAccountWorker,
-      InstructionAccountInputAddress<TAccountWorker>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountExperiment,
-      InstructionAccountInputAddress<TAccountExperiment>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountClaim,
-      InstructionAccountInputAddress<TAccountClaim>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountMint,
-      InstructionAccountInputAddress<TAccountMint>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountVault,
-      InstructionAccountInputAddress<TAccountVault>
-    >,
+    ResolvedInstructionAccountMeta<TAccountWorker, InstructionAccountInputAddress<TAccountWorker>>,
+    ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+    ResolvedInstructionAccountMeta<TAccountClaim, InstructionAccountInputAddress<TAccountClaim>>,
+    ResolvedInstructionAccountMeta<TAccountMint, InstructionAccountInputAddress<TAccountMint>>,
+    ResolvedInstructionAccountMeta<TAccountVault, InstructionAccountInputAddress<TAccountVault>>,
     ResolvedInstructionAccountMeta<
       TAccountWorkerTokenAccount,
       InstructionAccountInputAddress<TAccountWorkerTokenAccount>
     >,
-    ResolvedInstructionAccountMeta<
-      TAccountTokenProgram,
-      InstructionAccountInputAddress<TAccountTokenProgram>
-    >
+    ResolvedInstructionAccountMeta<TAccountTokenProgram, InstructionAccountInputAddress<TAccountTokenProgram>>
   >);
 }
 
@@ -299,10 +219,8 @@ export type WithdrawBondInput<
   TAccountClaim extends InstructionAccountInput = InstructionAccountInput,
   TAccountMint extends InstructionAccountInput = InstructionAccountInput,
   TAccountVault extends InstructionAccountInput = InstructionAccountInput,
-  TAccountWorkerTokenAccount extends InstructionAccountInput =
-    InstructionAccountInput,
-  TAccountTokenProgram extends InstructionAccountInput =
-    InstructionAccountInput,
+  TAccountWorkerTokenAccount extends InstructionAccountInput = InstructionAccountInput,
+  TAccountTokenProgram extends InstructionAccountInput = InstructionAccountInput,
 > = {
   worker: TAccountWorker;
   experiment: TAccountExperiment;
@@ -335,34 +253,16 @@ export function getWithdrawBondInstruction<
   config?: { programAddress?: TProgramAddress }
 ): WithdrawBondInstruction<
   TProgramAddress,
-  ResolvedInstructionAccountMeta<
-    TAccountWorker,
-    InstructionAccountInputAddress<TAccountWorker>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountExperiment,
-    InstructionAccountInputAddress<TAccountExperiment>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountClaim,
-    InstructionAccountInputAddress<TAccountClaim>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountMint,
-    InstructionAccountInputAddress<TAccountMint>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountVault,
-    InstructionAccountInputAddress<TAccountVault>
-  >,
+  ResolvedInstructionAccountMeta<TAccountWorker, InstructionAccountInputAddress<TAccountWorker>>,
+  ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+  ResolvedInstructionAccountMeta<TAccountClaim, InstructionAccountInputAddress<TAccountClaim>>,
+  ResolvedInstructionAccountMeta<TAccountMint, InstructionAccountInputAddress<TAccountMint>>,
+  ResolvedInstructionAccountMeta<TAccountVault, InstructionAccountInputAddress<TAccountVault>>,
   ResolvedInstructionAccountMeta<
     TAccountWorkerTokenAccount,
     InstructionAccountInputAddress<TAccountWorkerTokenAccount>
   >,
-  ResolvedInstructionAccountMeta<
-    TAccountTokenProgram,
-    InstructionAccountInputAddress<TAccountTokenProgram>
-  >
+  ResolvedInstructionAccountMeta<TAccountTokenProgram, InstructionAccountInputAddress<TAccountTokenProgram>>
 > {
   // Program address.
   const programAddress = config?.programAddress ?? REPLICATA_PROGRAM_ADDRESS;
@@ -373,29 +273,14 @@ export function getWithdrawBondInstruction<
   // Original accounts.
   const originalAccounts = {
     worker: { value: input.worker ?? null, isSigner: true, isWritable: false },
-    experiment: {
-      value: input.experiment ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
+    experiment: { value: input.experiment ?? null, isSigner: false, isWritable: true },
     claim: { value: input.claim ?? null, isSigner: false, isWritable: true },
     mint: { value: input.mint ?? null, isSigner: false, isWritable: false },
     vault: { value: input.vault ?? null, isSigner: false, isWritable: true },
-    workerTokenAccount: {
-      value: input.workerTokenAccount ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
-    tokenProgram: {
-      value: input.tokenProgram ?? null,
-      isSigner: false,
-      isWritable: false,
-    },
+    workerTokenAccount: { value: input.workerTokenAccount ?? null, isSigner: false, isWritable: true },
+    tokenProgram: { value: input.tokenProgram ?? null, isSigner: false, isWritable: false },
   };
-  const accounts = originalAccounts as Record<
-    keyof typeof originalAccounts,
-    ResolvedInstructionAccount
-  >;
+  const accounts = originalAccounts as Record<keyof typeof originalAccounts, ResolvedInstructionAccount>;
 
   // Resolve default values.
   if (!accounts.tokenProgram.value) {
@@ -417,34 +302,16 @@ export function getWithdrawBondInstruction<
     programAddress,
   } as WithdrawBondInstruction<
     TProgramAddress,
-    ResolvedInstructionAccountMeta<
-      TAccountWorker,
-      InstructionAccountInputAddress<TAccountWorker>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountExperiment,
-      InstructionAccountInputAddress<TAccountExperiment>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountClaim,
-      InstructionAccountInputAddress<TAccountClaim>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountMint,
-      InstructionAccountInputAddress<TAccountMint>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountVault,
-      InstructionAccountInputAddress<TAccountVault>
-    >,
+    ResolvedInstructionAccountMeta<TAccountWorker, InstructionAccountInputAddress<TAccountWorker>>,
+    ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+    ResolvedInstructionAccountMeta<TAccountClaim, InstructionAccountInputAddress<TAccountClaim>>,
+    ResolvedInstructionAccountMeta<TAccountMint, InstructionAccountInputAddress<TAccountMint>>,
+    ResolvedInstructionAccountMeta<TAccountVault, InstructionAccountInputAddress<TAccountVault>>,
     ResolvedInstructionAccountMeta<
       TAccountWorkerTokenAccount,
       InstructionAccountInputAddress<TAccountWorkerTokenAccount>
     >,
-    ResolvedInstructionAccountMeta<
-      TAccountTokenProgram,
-      InstructionAccountInputAddress<TAccountTokenProgram>
-    >
+    ResolvedInstructionAccountMeta<TAccountTokenProgram, InstructionAccountInputAddress<TAccountTokenProgram>>
   >);
 }
 
@@ -465,22 +332,14 @@ export type ParsedWithdrawBondInstruction<
   data: WithdrawBondInstructionData;
 };
 
-export function parseWithdrawBondInstruction<
-  TProgram extends string,
-  TAccountMetas extends readonly AccountMeta[],
->(
-  instruction: Instruction<TProgram> &
-    InstructionWithAccounts<TAccountMetas> &
-    InstructionWithData<ReadonlyUint8Array>
+export function parseWithdrawBondInstruction<TProgram extends string, TAccountMetas extends readonly AccountMeta[]>(
+  instruction: Instruction<TProgram> & InstructionWithAccounts<TAccountMetas> & InstructionWithData<ReadonlyUint8Array>
 ): ParsedWithdrawBondInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 7) {
-    throw new SolanaError(
-      SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
-      {
-        actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 7,
-      }
-    );
+    throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS, {
+      actualAccountMetas: instruction.accounts.length,
+      expectedAccountMetas: 7,
+    });
   }
   let accountIndex = 0;
   const getNextAccount = () => {

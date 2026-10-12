@@ -12,35 +12,33 @@ export type FieldProps = {
   inputMode?: "numeric" | "decimal" | "text";
 };
 
-function describedBy(name: string, hint?: string, errors: string[] = []) {
+type Change = ChangeEvent<HTMLInputElement | HTMLTextAreaElement>;
+
+function describedBy({ name, hint, errors = [] }: FieldProps) {
   const ids = [hint ? `${name}-hint` : "", errors.length ? `${name}-error` : ""].filter(Boolean);
 
   return ids.length ? ids.join(" ") : undefined;
 }
 
 function Control(props: FieldProps) {
-  const { name, value, multiline, placeholder, inputMode, errors = [] } = props;
-  const common = {
-    id: name,
-    name,
-    value,
-    placeholder,
-    className: "input mono",
-    "aria-invalid": errors.length > 0,
-    "aria-describedby": describedBy(name, props.hint, errors),
-    onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => props.onChange(event.target.value),
-  };
+  const { name, value, placeholder, errors = [] } = props;
+  const aria = { "aria-invalid": errors.length > 0, "aria-describedby": describedBy(props) };
+  const common = { id: name, name, value, placeholder, className: "input mono", ...aria };
+  const onChange = (event: Change) => props.onChange(event.target.value);
 
-  return multiline ? <textarea rows={3} {...common} /> : <input inputMode={inputMode} {...common} />;
+  return props.multiline ? (
+    <textarea rows={3} {...common} onChange={onChange} />
+  ) : (
+    <input inputMode={props.inputMode} {...common} onChange={onChange} />
+  );
 }
 
-function Messages({ name, hint, errors = [] }: Pick<FieldProps, "name" | "hint" | "errors">) {
-  return (
-    <>
-      {hint && <p id={`${name}-hint`} className="text-xs text-muted">{hint}</p>}
-      {errors.length > 0 && <p id={`${name}-error`} className="text-xs text-danger">{errors.join(" · ")}</p>}
-    </>
-  );
+function Note({ id, text, className }: { id: string; text?: string; className: string }) {
+  return text ? (
+    <p id={id} className={`text-xs ${className}`}>
+      {text}
+    </p>
+  ) : null;
 }
 
 export function Field(props: FieldProps) {
@@ -50,7 +48,8 @@ export function Field(props: FieldProps) {
         {props.label}
       </label>
       <Control {...props} />
-      <Messages name={props.name} hint={props.hint} errors={props.errors} />
+      <Note id={`${props.name}-hint`} text={props.hint} className="text-muted" />
+      <Note id={`${props.name}-error`} text={props.errors?.join(" · ")} className="text-danger" />
     </div>
   );
 }

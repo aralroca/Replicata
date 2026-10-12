@@ -46,30 +46,30 @@ import {
 } from "../accounts";
 import {
   getCancelExperimentInstruction,
-  getClaimInstructionAsync,
   getClaimRoyaltiesInstruction,
+  getClaimSlotInstructionAsync,
   getCommitInstructionAsync,
   getCreateExperimentInstructionAsync,
   getFinalizeInstruction,
   getRevealInstructionAsync,
   getWithdrawBondInstructionAsync,
   parseCancelExperimentInstruction,
-  parseClaimInstruction,
   parseClaimRoyaltiesInstruction,
+  parseClaimSlotInstruction,
   parseCommitInstruction,
   parseCreateExperimentInstruction,
   parseFinalizeInstruction,
   parseRevealInstruction,
   parseWithdrawBondInstruction,
   type CancelExperimentInput,
-  type ClaimAsyncInput,
   type ClaimRoyaltiesInput,
+  type ClaimSlotAsyncInput,
   type CommitAsyncInput,
   type CreateExperimentAsyncInput,
   type FinalizeInput,
   type ParsedCancelExperimentInstruction,
-  type ParsedClaimInstruction,
   type ParsedClaimRoyaltiesInstruction,
+  type ParsedClaimSlotInstruction,
   type ParsedCommitInstruction,
   type ParsedCreateExperimentInstruction,
   type ParsedFinalizeInstruction,
@@ -89,16 +89,12 @@ export enum ReplicataAccount {
   WorkerProfile,
 }
 
-export function identifyReplicataAccount(
-  account: { data: ReadonlyUint8Array } | ReadonlyUint8Array
-): ReplicataAccount {
+export function identifyReplicataAccount(account: { data: ReadonlyUint8Array } | ReadonlyUint8Array): ReplicataAccount {
   const data = "data" in account ? account.data : account;
   if (
     containsBytes(
       data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([155, 70, 22, 176, 123, 215, 246, 102])
-      ),
+      fixEncoderSize(getBytesEncoder(), 8).encode(new Uint8Array([155, 70, 22, 176, 123, 215, 246, 102])),
       0
     )
   ) {
@@ -107,9 +103,7 @@ export function identifyReplicataAccount(
   if (
     containsBytes(
       data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([93, 88, 219, 4, 130, 32, 125, 30])
-      ),
+      fixEncoderSize(getBytesEncoder(), 8).encode(new Uint8Array([93, 88, 219, 4, 130, 32, 125, 30])),
       0
     )
   ) {
@@ -118,23 +112,21 @@ export function identifyReplicataAccount(
   if (
     containsBytes(
       data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([40, 244, 208, 98, 69, 236, 70, 229])
-      ),
+      fixEncoderSize(getBytesEncoder(), 8).encode(new Uint8Array([40, 244, 208, 98, 69, 236, 70, 229])),
       0
     )
   ) {
     return ReplicataAccount.WorkerProfile;
   }
-  throw new SolanaError(
-    SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_ACCOUNT,
-    { accountData: data, programName: "replicata" }
-  );
+  throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_ACCOUNT, {
+    accountData: data,
+    programName: "replicata",
+  });
 }
 
 export enum ReplicataInstruction {
   CancelExperiment,
-  Claim,
+  ClaimSlot,
   ClaimRoyalties,
   Commit,
   CreateExperiment,
@@ -150,9 +142,7 @@ export function identifyReplicataInstruction(
   if (
     containsBytes(
       data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([45, 178, 175, 221, 94, 34, 54, 126])
-      ),
+      fixEncoderSize(getBytesEncoder(), 8).encode(new Uint8Array([45, 178, 175, 221, 94, 34, 54, 126])),
       0
     )
   ) {
@@ -161,20 +151,16 @@ export function identifyReplicataInstruction(
   if (
     containsBytes(
       data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([62, 198, 214, 193, 213, 159, 108, 210])
-      ),
+      fixEncoderSize(getBytesEncoder(), 8).encode(new Uint8Array([62, 198, 214, 193, 213, 159, 108, 210])),
       0
     )
   ) {
-    return ReplicataInstruction.Claim;
+    return ReplicataInstruction.ClaimSlot;
   }
   if (
     containsBytes(
       data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([238, 21, 168, 30, 248, 242, 60, 166])
-      ),
+      fixEncoderSize(getBytesEncoder(), 8).encode(new Uint8Array([238, 21, 168, 30, 248, 242, 60, 166])),
       0
     )
   ) {
@@ -183,9 +169,7 @@ export function identifyReplicataInstruction(
   if (
     containsBytes(
       data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([223, 140, 142, 165, 229, 208, 156, 74])
-      ),
+      fixEncoderSize(getBytesEncoder(), 8).encode(new Uint8Array([223, 140, 142, 165, 229, 208, 156, 74])),
       0
     )
   ) {
@@ -194,9 +178,7 @@ export function identifyReplicataInstruction(
   if (
     containsBytes(
       data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([13, 224, 230, 252, 170, 107, 114, 62])
-      ),
+      fixEncoderSize(getBytesEncoder(), 8).encode(new Uint8Array([13, 224, 230, 252, 170, 107, 114, 62])),
       0
     )
   ) {
@@ -205,9 +187,7 @@ export function identifyReplicataInstruction(
   if (
     containsBytes(
       data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([171, 61, 218, 56, 127, 115, 12, 217])
-      ),
+      fixEncoderSize(getBytesEncoder(), 8).encode(new Uint8Array([171, 61, 218, 56, 127, 115, 12, 217])),
       0
     )
   ) {
@@ -216,9 +196,7 @@ export function identifyReplicataInstruction(
   if (
     containsBytes(
       data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([9, 35, 59, 190, 167, 249, 76, 115])
-      ),
+      fixEncoderSize(getBytesEncoder(), 8).encode(new Uint8Array([9, 35, 59, 190, 167, 249, 76, 115])),
       0
     )
   ) {
@@ -227,47 +205,27 @@ export function identifyReplicataInstruction(
   if (
     containsBytes(
       data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([222, 199, 141, 31, 188, 93, 155, 40])
-      ),
+      fixEncoderSize(getBytesEncoder(), 8).encode(new Uint8Array([222, 199, 141, 31, 188, 93, 155, 40])),
       0
     )
   ) {
     return ReplicataInstruction.WithdrawBond;
   }
-  throw new SolanaError(
-    SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_INSTRUCTION,
-    { instructionData: data, programName: "replicata" }
-  );
+  throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_INSTRUCTION, {
+    instructionData: data,
+    programName: "replicata",
+  });
 }
 
-export type ParsedReplicataInstruction<
-  TProgram extends string = "G9Ssnp8rjg7gpi4Sm3EZLoC73z9pdXd9etJzUDH39Wj9",
-> =
-  | ({
-      instructionType: ReplicataInstruction.CancelExperiment;
-    } & ParsedCancelExperimentInstruction<TProgram>)
-  | ({
-      instructionType: ReplicataInstruction.Claim;
-    } & ParsedClaimInstruction<TProgram>)
-  | ({
-      instructionType: ReplicataInstruction.ClaimRoyalties;
-    } & ParsedClaimRoyaltiesInstruction<TProgram>)
-  | ({
-      instructionType: ReplicataInstruction.Commit;
-    } & ParsedCommitInstruction<TProgram>)
-  | ({
-      instructionType: ReplicataInstruction.CreateExperiment;
-    } & ParsedCreateExperimentInstruction<TProgram>)
-  | ({
-      instructionType: ReplicataInstruction.Finalize;
-    } & ParsedFinalizeInstruction<TProgram>)
-  | ({
-      instructionType: ReplicataInstruction.Reveal;
-    } & ParsedRevealInstruction<TProgram>)
-  | ({
-      instructionType: ReplicataInstruction.WithdrawBond;
-    } & ParsedWithdrawBondInstruction<TProgram>);
+export type ParsedReplicataInstruction<TProgram extends string = "G9Ssnp8rjg7gpi4Sm3EZLoC73z9pdXd9etJzUDH39Wj9"> =
+  | ({ instructionType: ReplicataInstruction.CancelExperiment } & ParsedCancelExperimentInstruction<TProgram>)
+  | ({ instructionType: ReplicataInstruction.ClaimSlot } & ParsedClaimSlotInstruction<TProgram>)
+  | ({ instructionType: ReplicataInstruction.ClaimRoyalties } & ParsedClaimRoyaltiesInstruction<TProgram>)
+  | ({ instructionType: ReplicataInstruction.Commit } & ParsedCommitInstruction<TProgram>)
+  | ({ instructionType: ReplicataInstruction.CreateExperiment } & ParsedCreateExperimentInstruction<TProgram>)
+  | ({ instructionType: ReplicataInstruction.Finalize } & ParsedFinalizeInstruction<TProgram>)
+  | ({ instructionType: ReplicataInstruction.Reveal } & ParsedRevealInstruction<TProgram>)
+  | ({ instructionType: ReplicataInstruction.WithdrawBond } & ParsedWithdrawBondInstruction<TProgram>);
 
 export function parseReplicataInstruction<TProgram extends string>(
   instruction: Instruction<TProgram> & InstructionWithData<ReadonlyUint8Array>
@@ -281,26 +239,17 @@ export function parseReplicataInstruction<TProgram extends string>(
         ...parseCancelExperimentInstruction(instruction),
       };
     }
-    case ReplicataInstruction.Claim: {
+    case ReplicataInstruction.ClaimSlot: {
       assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: ReplicataInstruction.Claim,
-        ...parseClaimInstruction(instruction),
-      };
+      return { instructionType: ReplicataInstruction.ClaimSlot, ...parseClaimSlotInstruction(instruction) };
     }
     case ReplicataInstruction.ClaimRoyalties: {
       assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: ReplicataInstruction.ClaimRoyalties,
-        ...parseClaimRoyaltiesInstruction(instruction),
-      };
+      return { instructionType: ReplicataInstruction.ClaimRoyalties, ...parseClaimRoyaltiesInstruction(instruction) };
     }
     case ReplicataInstruction.Commit: {
       assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: ReplicataInstruction.Commit,
-        ...parseCommitInstruction(instruction),
-      };
+      return { instructionType: ReplicataInstruction.Commit, ...parseCommitInstruction(instruction) };
     }
     case ReplicataInstruction.CreateExperiment: {
       assertIsInstructionWithAccounts(instruction);
@@ -311,30 +260,21 @@ export function parseReplicataInstruction<TProgram extends string>(
     }
     case ReplicataInstruction.Finalize: {
       assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: ReplicataInstruction.Finalize,
-        ...parseFinalizeInstruction(instruction),
-      };
+      return { instructionType: ReplicataInstruction.Finalize, ...parseFinalizeInstruction(instruction) };
     }
     case ReplicataInstruction.Reveal: {
       assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: ReplicataInstruction.Reveal,
-        ...parseRevealInstruction(instruction),
-      };
+      return { instructionType: ReplicataInstruction.Reveal, ...parseRevealInstruction(instruction) };
     }
     case ReplicataInstruction.WithdrawBond: {
       assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: ReplicataInstruction.WithdrawBond,
-        ...parseWithdrawBondInstruction(instruction),
-      };
+      return { instructionType: ReplicataInstruction.WithdrawBond, ...parseWithdrawBondInstruction(instruction) };
     }
     default:
-      throw new SolanaError(
-        SOLANA_ERROR__PROGRAM_CLIENTS__UNRECOGNIZED_INSTRUCTION_TYPE,
-        { instructionType: instructionType as string, programName: "replicata" }
-      );
+      throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__UNRECOGNIZED_INSTRUCTION_TYPE, {
+        instructionType: instructionType as string,
+        programName: "replicata",
+      });
   }
 }
 
@@ -348,60 +288,38 @@ export type ReplicataPlugin = {
 };
 
 export type ReplicataPluginAccounts = {
-  claim: ReturnType<typeof getClaimCodec> &
-    SelfFetchFunctions<ClaimArgs, Claim>;
-  experiment: ReturnType<typeof getExperimentCodec> &
-    SelfFetchFunctions<ExperimentArgs, Experiment>;
-  workerProfile: ReturnType<typeof getWorkerProfileCodec> &
-    SelfFetchFunctions<WorkerProfileArgs, WorkerProfile>;
+  claim: ReturnType<typeof getClaimCodec> & SelfFetchFunctions<ClaimArgs, Claim>;
+  experiment: ReturnType<typeof getExperimentCodec> & SelfFetchFunctions<ExperimentArgs, Experiment>;
+  workerProfile: ReturnType<typeof getWorkerProfileCodec> & SelfFetchFunctions<WorkerProfileArgs, WorkerProfile>;
 };
 
 export type ReplicataPluginInstructions = {
   cancelExperiment: (
     input: CancelExperimentInput
-  ) => ReturnType<typeof getCancelExperimentInstruction> &
-    SelfPlanAndSendFunctions;
-  claim: (
-    input: ClaimAsyncInput
-  ) => ReturnType<typeof getClaimInstructionAsync> & SelfPlanAndSendFunctions;
+  ) => ReturnType<typeof getCancelExperimentInstruction> & SelfPlanAndSendFunctions;
+  claimSlot: (input: ClaimSlotAsyncInput) => ReturnType<typeof getClaimSlotInstructionAsync> & SelfPlanAndSendFunctions;
   claimRoyalties: (
     input: ClaimRoyaltiesInput
-  ) => ReturnType<typeof getClaimRoyaltiesInstruction> &
-    SelfPlanAndSendFunctions;
-  commit: (
-    input: CommitAsyncInput
-  ) => ReturnType<typeof getCommitInstructionAsync> & SelfPlanAndSendFunctions;
+  ) => ReturnType<typeof getClaimRoyaltiesInstruction> & SelfPlanAndSendFunctions;
+  commit: (input: CommitAsyncInput) => ReturnType<typeof getCommitInstructionAsync> & SelfPlanAndSendFunctions;
   createExperiment: (
     input: CreateExperimentAsyncInput
-  ) => ReturnType<typeof getCreateExperimentInstructionAsync> &
-    SelfPlanAndSendFunctions;
-  finalize: (
-    input: FinalizeInput
-  ) => ReturnType<typeof getFinalizeInstruction> & SelfPlanAndSendFunctions;
-  reveal: (
-    input: RevealAsyncInput
-  ) => ReturnType<typeof getRevealInstructionAsync> & SelfPlanAndSendFunctions;
+  ) => ReturnType<typeof getCreateExperimentInstructionAsync> & SelfPlanAndSendFunctions;
+  finalize: (input: FinalizeInput) => ReturnType<typeof getFinalizeInstruction> & SelfPlanAndSendFunctions;
+  reveal: (input: RevealAsyncInput) => ReturnType<typeof getRevealInstructionAsync> & SelfPlanAndSendFunctions;
   withdrawBond: (
     input: WithdrawBondAsyncInput
-  ) => ReturnType<typeof getWithdrawBondInstructionAsync> &
-    SelfPlanAndSendFunctions;
+  ) => ReturnType<typeof getWithdrawBondInstructionAsync> & SelfPlanAndSendFunctions;
 };
 
-export type ReplicataPluginPdas = {
-  claim: typeof findClaimPda;
-  workerProfile: typeof findWorkerProfilePda;
-};
+export type ReplicataPluginPdas = { claim: typeof findClaimPda; workerProfile: typeof findWorkerProfilePda };
 
-export type ReplicataPluginRequirements = ClientWithRpc<
-  GetAccountInfoApi & GetMultipleAccountsApi
-> &
+export type ReplicataPluginRequirements = ClientWithRpc<GetAccountInfoApi & GetMultipleAccountsApi> &
   ClientWithTransactionPlanning &
   ClientWithTransactionSending;
 
 export function replicataProgram() {
-  return <T extends ReplicataPluginRequirements>(
-    client: T
-  ): ExtendedClient<T, { replicata: ReplicataPlugin }> => {
+  return <T extends ReplicataPluginRequirements>(client: T): ExtendedClient<T, { replicata: ReplicataPlugin }> => {
     return extendClient(client, {
       replicata: <ReplicataPlugin>{
         accounts: {
@@ -410,43 +328,14 @@ export function replicataProgram() {
           workerProfile: addSelfFetchFunctions(client, getWorkerProfileCodec()),
         },
         instructions: {
-          cancelExperiment: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getCancelExperimentInstruction(input)
-            ),
-          claim: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getClaimInstructionAsync(input)
-            ),
-          claimRoyalties: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getClaimRoyaltiesInstruction(input)
-            ),
-          commit: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getCommitInstructionAsync(input)
-            ),
-          createExperiment: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getCreateExperimentInstructionAsync(input)
-            ),
-          finalize: (input) =>
-            addSelfPlanAndSendFunctions(client, getFinalizeInstruction(input)),
-          reveal: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getRevealInstructionAsync(input)
-            ),
-          withdrawBond: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getWithdrawBondInstructionAsync(input)
-            ),
+          cancelExperiment: (input) => addSelfPlanAndSendFunctions(client, getCancelExperimentInstruction(input)),
+          claimSlot: (input) => addSelfPlanAndSendFunctions(client, getClaimSlotInstructionAsync(input)),
+          claimRoyalties: (input) => addSelfPlanAndSendFunctions(client, getClaimRoyaltiesInstruction(input)),
+          commit: (input) => addSelfPlanAndSendFunctions(client, getCommitInstructionAsync(input)),
+          createExperiment: (input) => addSelfPlanAndSendFunctions(client, getCreateExperimentInstructionAsync(input)),
+          finalize: (input) => addSelfPlanAndSendFunctions(client, getFinalizeInstruction(input)),
+          reveal: (input) => addSelfPlanAndSendFunctions(client, getRevealInstructionAsync(input)),
+          withdrawBond: (input) => addSelfPlanAndSendFunctions(client, getWithdrawBondInstructionAsync(input)),
         },
         pdas: { claim: findClaimPda, workerProfile: findWorkerProfilePda },
         identifyAccount: identifyReplicataAccount,

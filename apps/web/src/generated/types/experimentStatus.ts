@@ -32,12 +32,6 @@ export function getExperimentStatusDecoder(): FixedSizeDecoder<ExperimentStatus>
   return getEnumDecoder(ExperimentStatus);
 }
 
-export function getExperimentStatusCodec(): FixedSizeCodec<
-  ExperimentStatusArgs,
-  ExperimentStatus
-> {
-  return combineCodec(
-    getExperimentStatusEncoder(),
-    getExperimentStatusDecoder()
-  );
+export function getExperimentStatusCodec(): FixedSizeCodec<ExperimentStatusArgs, ExperimentStatus> {
+  return combineCodec(getExperimentStatusEncoder(), getExperimentStatusDecoder());
 }

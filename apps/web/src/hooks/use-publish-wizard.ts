@@ -2,11 +2,7 @@
 
 import { useState } from "react";
 
-import {
-  DEFAULT_ECONOMICS_FORM,
-  economicsIssues,
-  type EconomicsForm,
-} from "@/lib/publish/economics-form";
+import { DEFAULT_ECONOMICS_FORM, economicsIssues, type EconomicsForm } from "@/lib/publish/economics-form";
 import { EMPTY_SPEC_FORM, specFormIssues, type SpecForm } from "@/lib/publish/spec-form";
 import type { SpecIssue } from "@/lib/spec/validate";
 
@@ -34,18 +30,34 @@ function issuesFor(step: Step, spec: SpecForm, economics: EconomicsForm, decimal
   return byStep[step]();
 }
 
-export function usePublishWizard(decimals = 6) {
-  const [step, setStep] = useState<Step>(1);
+function useForms() {
   const [spec, setSpec] = useState<SpecForm>(EMPTY_SPEC_FORM);
   const [economics, setEconomics] = useState<EconomicsForm>(DEFAULT_ECONOMICS_FORM);
-  const [touched, setTouched] = useState(false);
-  const issues = touched ? issuesFor(step, spec, economics, decimals) : [];
-  const next = () => {
-    const blocking = issuesFor(step, spec, economics, decimals);
 
-    setTouched(blocking.length > 0);
-    if (blocking.length === 0) setStep((current) => Math.min(current + 1, 3) as Step);
+  return { spec, setSpec, economics, setEconomics };
+}
+
+const nextStep = (step: Step) => Math.min(step + 1, 3) as Step;
+const previousStep = (step: Step) => Math.max(step - 1, 1) as Step;
+
+/** Step navigation: "Next" only advances when the current step has no blocking issue. */
+function useSteps(blocking: (step: Step) => SpecIssue[]) {
+  const [step, setStep] = useState<Step>(1);
+  const [touched, setTouched] = useState(false);
+  const next = () => {
+    const ok = blocking(step).length === 0;
+
+    setTouched(!ok);
+    setStep(ok ? nextStep(step) : step);
   };
 
-  return { step, spec, setSpec, economics, setEconomics, issues, next, back: () => setStep((s) => Math.max(s - 1, 1) as Step) };
+  return { step, touched, next, back: () => setStep(previousStep) };
+}
+
+export function usePublishWizard(decimals = 6) {
+  const forms = useForms();
+  const blocking = (step: Step) => issuesFor(step, forms.spec, forms.economics, decimals);
+  const steps = useSteps(blocking);
+
+  return { ...forms, ...steps, issues: steps.touched ? blocking(steps.step) : [] };
 }

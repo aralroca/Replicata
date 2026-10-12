@@ -32,10 +32,18 @@ export function anyNetworkSvmScheme(signer: TransactionSigner, rpcUrl: string): 
   };
 }
 
-/** x402 client that pays `network` (CAIP-2 from /v1/config) with the connected wallet. */
-export function createPaymentClient(signer: TransactionSigner, network: string, rpcUrl: string) {
-  return new x402Client().register(
-    network as PaymentRequirements["network"],
-    anyNetworkSvmScheme(signer, rpcUrl)
-  );
+export type PaymentTarget = { network: string; rpcUrl: string; mint: string; maxAmount: number | bigint };
+
+/**
+ * x402 client that pays `network` (CAIP-2 from /v1/config) with the connected wallet.
+ * Spend controls only allow our USDC mint (localnet mints are not x402 "default assets") and
+ * never more than the price shown on the button.
+ */
+export function createPaymentClient(signer: TransactionSigner, target: PaymentTarget) {
+  const network = target.network as PaymentRequirements["network"];
+  const allowed = { network, asset: target.mint, maxAmountPerPayment: target.maxAmount.toString() };
+
+  return new x402Client()
+    .register(network, anyNetworkSvmScheme(signer, target.rpcUrl))
+    .setSpendControls({ allowedAssets: [allowed] });
 }

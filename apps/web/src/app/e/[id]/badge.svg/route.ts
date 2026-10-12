@@ -9,8 +9,10 @@ export const dynamic = "force-dynamic";
 // Always 200: image embeds (GitHub camo, preprint servers) hide non-2xx images.
 function svg(body: string): Response {
   return new Response(body, {
-
-    headers: { "Content-Type": "image/svg+xml; charset=utf-8", "Cache-Control": "public, max-age=30" },
+    headers: {
+      "Content-Type": "image/svg+xml; charset=utf-8",
+      "Cache-Control": "public, max-age=30",
+    },
   });
 }
 

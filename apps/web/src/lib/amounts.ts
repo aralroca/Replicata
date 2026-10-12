@@ -8,7 +8,10 @@ export function formatAmount(base: number | bigint, decimals = USDC_DECIMALS): s
   const sign = value < 0n ? "-" : "";
   const digits = (value < 0n ? -value : value).toString().padStart(decimals + 1, "0");
   const whole = digits.slice(0, digits.length - decimals);
-  const fraction = digits.slice(digits.length - decimals).replace(/0+$/, "").padEnd(2, "0");
+  const fraction = digits
+    .slice(digits.length - decimals)
+    .replace(/0+$/, "")
+    .padEnd(2, "0");
 
   return `${sign}${BigInt(whole).toLocaleString("en-US")}.${fraction}`;
 }

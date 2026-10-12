@@ -10,6 +10,10 @@ export function formatDeadline(unix: number): string {
   return new Date(unix * 1000).toISOString().replace("T", " ").slice(0, 16) + " UTC";
 }
 
+export function experimentTitle(experiment: ExperimentView): string {
+  return experiment.spec?.title ?? `Experiment ${shortHash(experiment.id)}`;
+}
+
 export function StatusPills({ experiment }: { experiment: ExperimentView }) {
   const status = STATUS_META[experiment.status];
   const phase = PHASE_META[experiment.phase];
@@ -33,17 +37,21 @@ function CardStats({ experiment }: { experiment: ExperimentView }) {
   );
 }
 
-export function ExperimentCard({ experiment }: { experiment: ExperimentView }) {
-  const title = experiment.spec?.title ?? `Experiment ${shortHash(experiment.id)}`;
+function CardTitle({ experiment }: { experiment: ExperimentView }) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-2">
+      <h3 className="text-base font-semibold">
+        <Link href={`/e/${experiment.id}`}>{experimentTitle(experiment)}</Link>
+      </h3>
+      <StatusPills experiment={experiment} />
+    </div>
+  );
+}
 
+export function ExperimentCard({ experiment }: { experiment: ExperimentView }) {
   return (
     <li className="card" data-testid="experiment-card">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <h3 className="text-base font-semibold">
-          <Link href={`/e/${experiment.id}`}>{title}</Link>
-        </h3>
-        <StatusPills experiment={experiment} />
-      </div>
+      <CardTitle experiment={experiment} />
       <CardStats experiment={experiment} />
     </li>
   );

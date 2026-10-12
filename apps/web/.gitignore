@@ -46,3 +46,10 @@ next-env.d.ts
 
 # solana local validator
 test-ledger/
+
+# test artifacts
+/.vitest
+/playwright-report
+/test-results
+/playwright/.cache
+/.next-e2e/

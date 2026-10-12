@@ -1,9 +1,7 @@
 import { CLUSTER, RPC_URL, type Cluster } from "@/lib/env";
 
 function clusterQuery(cluster: Cluster, rpcUrl: string): string {
-  return cluster === "devnet"
-    ? "?cluster=devnet"
-    : `?cluster=custom&customUrl=${encodeURIComponent(rpcUrl)}`;
+  return cluster === "devnet" ? "?cluster=devnet" : `?cluster=custom&customUrl=${encodeURIComponent(rpcUrl)}`;
 }
 
 export function explorerUrl(

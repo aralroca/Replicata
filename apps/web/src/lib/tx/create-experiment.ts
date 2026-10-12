@@ -9,6 +9,7 @@ import {
   setTransactionMessageLifetimeUsingBlockhash,
   signAndSendTransactionMessageWithSigners,
   type Address,
+  type Instruction,
   type TransactionSendingSigner,
 } from "@solana/kit";
 
@@ -43,36 +44,44 @@ export function deadlines(economics: Economics, now = Math.floor(Date.now() / 10
   return { commitDeadline, revealDeadline: commitDeadline + BigInt(economics.revealSecs) };
 }
 
+function instructionArgs(input: CreateExperimentInput) {
+  const { economics: e } = input;
+
+  return {
+    nonce: input.nonce,
+    specHash: input.specHash,
+    imageDigest: input.imageDigest,
+    ...{ reward: e.reward, bond: e.bond, accessPrice: e.accessPrice },
+    ...{ k: e.k, maxClaims: e.maxClaims, authorShareBps: e.authorShareBps },
+    ...deadlines(e, input.now),
+  };
+}
+
 export async function createExperimentInstruction(input: CreateExperimentInput, experiment: Address) {
-  const { economics: e, signer, mint } = input;
+  const { signer, mint } = input;
   const authorityTokenAccount = await findTokenAccount(signer.address, mint);
-  const args = { nonce: input.nonce, specHash: input.specHash, imageDigest: input.imageDigest };
-  const amounts = { reward: e.reward, bond: e.bond, accessPrice: e.accessPrice };
-  const params = { k: e.k, maxClaims: e.maxClaims, authorShareBps: e.authorShareBps };
-  const accounts = { authority: signer, experiment, mint, authorityTokenAccount };
 
   return getCreateExperimentInstructionAsync({
-    ...accounts,
-    ...args,
-    ...amounts,
-    ...params,
-    ...deadlines(e, input.now),
+    ...{ authority: signer, experiment, mint, authorityTokenAccount },
+    ...instructionArgs(input),
   });
 }
 
-export async function sendCreateExperiment(
-  input: CreateExperimentInput
-): Promise<{ experiment: Address; signature: string }> {
-  const experiment = await findExperimentPda(input.signer.address, input.nonce);
-  const instruction = await createExperimentInstruction(input, experiment);
+async function transactionMessage(input: CreateExperimentInput, instruction: Instruction) {
   const { value: blockhash } = await createSolanaRpc(input.rpcUrl).getLatestBlockhash().send();
-  const message = pipe(
+
+  return pipe(
     createTransactionMessage({ version: 0 }),
     (m) => setTransactionMessageFeePayerSigner(input.signer, m),
     (m) => setTransactionMessageLifetimeUsingBlockhash(blockhash, m),
     (m) => appendTransactionMessageInstruction(instruction, m)
   );
-  const signature = await signAndSendTransactionMessageWithSigners(message);
+}
+
+export async function sendCreateExperiment(input: CreateExperimentInput) {
+  const experiment = await findExperimentPda(input.signer.address, input.nonce);
+  const instruction = await createExperimentInstruction(input, experiment);
+  const signature = await signAndSendTransactionMessageWithSigners(await transactionMessage(input, instruction));
 
   return { experiment, signature: getBase58Decoder().decode(signature) };
 }

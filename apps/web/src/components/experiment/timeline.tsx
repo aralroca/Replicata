@@ -8,33 +8,35 @@ const MARKS: Record<StepState, { icon: string; className: string; text: string }
   failed: { icon: "✕", className: "border-danger text-danger", text: "failed" },
 };
 
-function Step({ step }: { step: TimelineStep }) {
-  const mark = MARKS[step.state];
+function Mark({ state }: { state: StepState }) {
+  return (
+    <span aria-hidden className={`grid size-8 place-items-center rounded-full border-2 ${MARKS[state].className}`}>
+      {MARKS[state].icon}
+    </span>
+  );
+}
 
+function Step({ step }: { step: TimelineStep }) {
   return (
     <li className="flex items-center gap-3" data-testid={`step-${step.key}`} data-state={step.state}>
-      <span aria-hidden className={`grid size-8 place-items-center rounded-full border-2 ${mark.className}`}>
-        {mark.icon}
-      </span>
+      <Mark state={step.state} />
       <span>
         <span className="font-medium">{step.label}</span> <span className="text-muted">{step.detail}</span>
-        <span className="sr-only"> ({mark.text})</span>
+        <span className="sr-only"> ({MARKS[step.state].text})</span>
       </span>
     </li>
   );
 }
 
 export function Timeline({ experiment }: { experiment: ExperimentView }) {
+  const steps = timeline(experiment).map((step) => <Step key={step.key} step={step} />);
+
   return (
     <section aria-labelledby="timeline-title" aria-live="polite" className="card">
       <h2 id="timeline-title" className="mb-4 font-semibold">
         Timeline
       </h2>
-      <ol className="grid gap-3 sm:grid-cols-4">
-        {timeline(experiment).map((step) => (
-          <Step key={step.key} step={step} />
-        ))}
-      </ol>
+      <ol className="grid gap-3 sm:grid-cols-4">{steps}</ol>
     </section>
   );
 }

@@ -6,6 +6,15 @@ import { explorerUrl } from "@/lib/explorer";
 import { shortHash } from "@/lib/hex";
 import type { Tone } from "@/lib/status";
 
+/** In-app link to a pubkey page (`/w/…`, `/r/…`, `/e/…`) showing a shortened key. */
+export function KeyLink({ prefix, value }: { prefix: "/w" | "/r" | "/e"; value: string }) {
+  return (
+    <Link href={`${prefix}/${value}`} className="mono">
+      {shortHash(value)}
+    </Link>
+  );
+}
+
 const TONES: Record<Tone, string> = {
   neutral: "border-border text-muted",
   info: "border-accent/50 text-accent",
@@ -16,9 +25,7 @@ const TONES: Record<Tone, string> = {
 
 export function Pill({ tone, children }: { tone: Tone; children: ReactNode }) {
   return (
-    <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${TONES[tone]}`}>
-      {children}
-    </span>
+    <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${TONES[tone]}`}>{children}</span>
   );
 }
 

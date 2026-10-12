@@ -159,7 +159,10 @@ pub async fn map_failures(State(state): State<AppState>, req: Request, next: Nex
     if failure == Failure::SettlementFailed && payer_short_of_funds(&state, header.as_deref()).await {
         failure = Failure::InsufficientFunds;
     }
-    let faucet = if state.cfg.cluster == "localnet" { "scripts/localnet.sh fund <pubkey>" } else { replicata_core::net::USDC_FAUCET_URL };
+    let mut body = failure_body(&failure, &message, replicata_core::net::USDC_FAUCET_URL);
+    if failure == Failure::InsufficientFunds && state.cfg.cluster == "localnet" {
+        body["hint"] = "local USDC: scripts/localnet.sh fund <pubkey>".into();
+    }
 
     if failure == Failure::FacilitatorUnavailable {
         parts.status = StatusCode::SERVICE_UNAVAILABLE;
@@ -167,7 +170,7 @@ pub async fn map_failures(State(state): State<AppState>, req: Request, next: Nex
     }
     parts.headers.insert("content-type", HeaderValue::from_static("application/json"));
     parts.headers.remove("content-length");
-    Response::from_parts(parts, Body::from(failure_body(&failure, &message, faucet).to_string()))
+    Response::from_parts(parts, Body::from(body.to_string()))
 }
 
 #[cfg(test)]

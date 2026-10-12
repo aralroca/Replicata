@@ -1,11 +1,6 @@
 // PDAs of the Replicata program (programs/replicata): experiment = ["experiment", authority, nonce u64 LE];
 // vault = ATA(experiment, mint) with the classic SPL Token program.
-import {
-  getAddressEncoder,
-  getProgramDerivedAddress,
-  getU64Encoder,
-  type Address,
-} from "@solana/kit";
+import { getAddressEncoder, getProgramDerivedAddress, getU64Encoder, type Address } from "@solana/kit";
 import { findAssociatedTokenPda, TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
 
 import { REPLICATA_PROGRAM_ADDRESS } from "@/generated";

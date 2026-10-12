@@ -1,13 +1,7 @@
 // Thin typed client for the coordinator's free endpoints (docs/API.md).
 import { COORDINATOR_URL } from "@/lib/env";
 import { canonicalSpecJson } from "@/lib/spec/canonical";
-import type {
-  AuthorView,
-  CoordinatorConfig,
-  ExperimentView,
-  JobSpec,
-  WorkerView,
-} from "@/lib/types";
+import type { AuthorView, CoordinatorConfig, ExperimentView, JobSpec, WorkerView } from "@/lib/types";
 
 export class ApiError extends Error {
   constructor(
@@ -21,7 +15,7 @@ export class ApiError extends Error {
 async function errorMessage(response: Response): Promise<string> {
   const body = await response.json().catch(() => null);
 
-  return body?.error ?? `${response.status} ${response.statusText}`;
+  return body?.message ?? body?.error ?? `${response.status} ${response.statusText}`;
 }
 
 export async function request<T>(path: string, init?: RequestInit, base = COORDINATOR_URL) {

@@ -101,16 +101,9 @@ export function getReplicataErrorMessage(code: ReplicataError): string {
 
 export function isReplicataError<TProgramErrorCode extends ReplicataError>(
   error: unknown,
-  transactionMessage: {
-    instructions: Record<number, { programAddress: Address }>;
-  },
+  transactionMessage: { instructions: Record<number, { programAddress: Address }> },
   code?: TProgramErrorCode
 ): error is SolanaError<typeof SOLANA_ERROR__INSTRUCTION_ERROR__CUSTOM> &
   Readonly<{ context: Readonly<{ code: TProgramErrorCode }> }> {
-  return isProgramError<TProgramErrorCode>(
-    error,
-    transactionMessage,
-    REPLICATA_PROGRAM_ADDRESS,
-    code
-  );
+  return isProgramError<TProgramErrorCode>(error, transactionMessage, REPLICATA_PROGRAM_ADDRESS, code);
 }

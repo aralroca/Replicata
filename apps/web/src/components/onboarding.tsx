@@ -3,11 +3,17 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { replicateCommand } from "@/components/experiment/share-boxes";
+import { Code, replicateCommand } from "@/components/experiment/share-boxes";
 import { useConfig } from "@/hooks/use-coordinator";
 import { CLUSTER } from "@/lib/env";
 
 const DEFAULT_FAUCETS = { sol: "https://faucet.solana.com", usdc: "https://faucet.circle.com" };
+
+const External = ({ href, children }: { href: string; children: ReactNode }) => (
+  <a href={href} target="_blank" rel="noreferrer">
+    {children}
+  </a>
+);
 
 function OnboardingStep({ n, title, children }: { n: number; title: string; children: ReactNode }) {
   return (
@@ -23,8 +29,8 @@ function OnboardingStep({ n, title, children }: { n: number; title: string; chil
 function WalletStep() {
   return (
     <OnboardingStep n={1} title="Install a wallet (15 s)">
-      Install <a href="https://phantom.com/download" target="_blank" rel="noreferrer">Phantom</a>, then
-      enable <em>Settings → Developer settings → Testnet mode</em> ({CLUSTER}). Click <em>Select Wallet</em> at the top.
+      Install <External href="https://phantom.com/download">Phantom</External>, enable{" "}
+      <em>Settings → Developer settings → Testnet mode</em> ({CLUSTER}) and click <em>Select Wallet</em> at the top.
     </OnboardingStep>
   );
 }
@@ -32,9 +38,8 @@ function WalletStep() {
 function FundsStep({ faucets }: { faucets: typeof DEFAULT_FAUCETS }) {
   return (
     <OnboardingStep n={2} title="Get test funds (30 s)">
-      <a href={faucets.sol} target="_blank" rel="noreferrer">SOL faucet</a> pays transaction fees;{" "}
-      <a href={faucets.usdc} target="_blank" rel="noreferrer">USDC faucet</a> (Solana {CLUSTER}) pays rewards, bonds and
-      result access.
+      The <External href={faucets.sol}>SOL faucet</External> pays transaction fees; the{" "}
+      <External href={faucets.usdc}>USDC faucet</External> (Solana {CLUSTER}) pays rewards, bonds and result access.
     </OnboardingStep>
   );
 }
@@ -43,9 +48,7 @@ function ActStep() {
   return (
     <OnboardingStep n={3} title="Publish or replicate (15 s)">
       <Link href="/publish">Publish an experiment</Link> with a reward, or earn by replicating one:
-      <pre className="mono mt-2 overflow-x-auto rounded-lg bg-background p-3 text-xs text-foreground" tabIndex={0}>
-        <code>{replicateCommand("<experiment-id>")}</code>
-      </pre>
+      <Code code={replicateCommand("<experiment-id>")} label="Replicate command" />
     </OnboardingStep>
   );
 }

@@ -118,7 +118,7 @@ The agent signs the transaction (it is the fee payer and the on-chain author) an
 | Situation | Response |
 |---|---|
 | No / malformed payment header | `402` + `PAYMENT-REQUIRED` |
-| Payer has insufficient USDC | `402` with `{"error": "insufficient_funds", "faucet": "<url>"}` |
+| Payer has insufficient USDC | `402` with `{"error": "insufficient_funds", "faucet": "<url>"}` (+ `hint` on localnet) |
 | Same payment replayed | `409 {"error": "payment_replayed"}` |
 | Facilitator unreachable | `503` + `Retry-After: 5` |
 | Settlement failed | `402 {"error": "settlement_failed"}`; resource **not** delivered |

@@ -10,16 +10,10 @@ import type { ReadonlyUint8Array } from "@solana/kit";
 
 export const BPS_DENOMINATOR: number = 10000;
 
-export const CLAIM_SEED: ReadonlyUint8Array = new Uint8Array([
-  99, 108, 97, 105, 109,
-]);
+export const CLAIM_SEED: ReadonlyUint8Array = new Uint8Array([99, 108, 97, 105, 109]);
 
-export const EXPERIMENT_SEED: ReadonlyUint8Array = new Uint8Array([
-  101, 120, 112, 101, 114, 105, 109, 101, 110, 116,
-]);
+export const EXPERIMENT_SEED: ReadonlyUint8Array = new Uint8Array([101, 120, 112, 101, 114, 105, 109, 101, 110, 116]);
 
 export const MAX_CLAIMS: number = 5;
 
-export const WORKER_SEED: ReadonlyUint8Array = new Uint8Array([
-  119, 111, 114, 107, 101, 114,
-]);
+export const WORKER_SEED: ReadonlyUint8Array = new Uint8Array([119, 111, 114, 107, 101, 114]);

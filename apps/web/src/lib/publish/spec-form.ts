@@ -58,9 +58,7 @@ export function parseEnv(text: string): Record<string, string> | null {
 export function parseInputs(text: string): SpecInput[] | null {
   const parts = lines(text).map((line) => line.split(/\s+/));
 
-  return parts.every((p) => p.length === 3)
-    ? parts.map(([url, sha256, path]) => ({ url, sha256, path }))
-    : null;
+  return parts.every((p) => p.length === 3) ? parts.map(([url, sha256, path]) => ({ url, sha256, path })) : null;
 }
 
 const textFields = (form: SpecForm) => ({
@@ -95,7 +93,11 @@ const FORMAT_ISSUES: { field: string; message: string; ok: (form: SpecForm) => b
     message: "inputs: one `<url> <sha256> <path>` per line",
     ok: (f) => parseInputs(f.inputs) !== null,
   },
-  { field: "seed", message: "seed must be an integer in 0..=2^64-1", ok: (f) => parseSeed(f.seed) !== null },
+  {
+    field: "seed",
+    message: "seed must be an integer in 0..=2^64-1",
+    ok: (f) => parseSeed(f.seed) !== null,
+  },
 ];
 
 /** Form-format problems first, then the exact `JobSpec::validate` checks. */

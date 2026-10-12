@@ -7,8 +7,8 @@
  */
 
 export * from "./cancelExperiment";
-export * from "./claim";
 export * from "./claimRoyalties";
+export * from "./claimSlot";
 export * from "./commit";
 export * from "./createExperiment";
 export * from "./finalize";

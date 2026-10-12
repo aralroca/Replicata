@@ -1,6 +1,6 @@
 "use client";
 
-import { StatusPills } from "@/components/experiment-card";
+import { experimentTitle, StatusPills } from "@/components/experiment-card";
 import { Claims, Facts } from "@/components/experiment/facts";
 import { ResultSection } from "@/components/experiment/result-section";
 import { BadgeBox, ReplicateBox } from "@/components/experiment/share-boxes";
@@ -8,16 +8,26 @@ import { Timeline } from "@/components/experiment/timeline";
 import { LoadFailed, Loading } from "@/components/ui";
 import { useExperiment } from "@/hooks/use-coordinator";
 import { ApiError } from "@/lib/api";
-import { shortHash } from "@/lib/hex";
 import type { ExperimentView } from "@/lib/types";
 
 function Title({ experiment }: { experiment: ExperimentView }) {
   return (
     <header className="grid gap-2">
-      <h1 className="text-2xl font-bold">{experiment.spec?.title ?? `Experiment ${shortHash(experiment.id)}`}</h1>
+      <h1 className="text-2xl font-bold">{experimentTitle(experiment)}</h1>
       <StatusPills experiment={experiment} />
       {experiment.spec?.description && <p className="text-muted">{experiment.spec.description}</p>}
     </header>
+  );
+}
+
+function Details({ experiment }: { experiment: ExperimentView }) {
+  return (
+    <>
+      <Facts experiment={experiment} />
+      <Claims claims={experiment.claims} />
+      <ReplicateBox id={experiment.id} />
+      <BadgeBox id={experiment.id} />
+    </>
   );
 }
 
@@ -27,10 +37,7 @@ function Experiment({ experiment }: { experiment: ExperimentView }) {
       <Title experiment={experiment} />
       <Timeline experiment={experiment} />
       <ResultSection experiment={experiment} />
-      <Facts experiment={experiment} />
-      <Claims claims={experiment.claims} />
-      <ReplicateBox id={experiment.id} />
-      <BadgeBox id={experiment.id} />
+      <Details experiment={experiment} />
     </div>
   );
 }

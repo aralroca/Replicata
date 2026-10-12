@@ -52,13 +52,12 @@ import {
 } from "@solana/kit/program-client-core";
 import { REPLICATA_PROGRAM_ADDRESS } from "../programs";
 
-export const CREATE_EXPERIMENT_DISCRIMINATOR: ReadonlyUint8Array =
-  new Uint8Array([13, 224, 230, 252, 170, 107, 114, 62]);
+export const CREATE_EXPERIMENT_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([
+  13, 224, 230, 252, 170, 107, 114, 62,
+]);
 
 export function getCreateExperimentDiscriminatorBytes(): ReadonlyUint8Array {
-  return fixEncoderSize(getBytesEncoder(), 8).encode(
-    CREATE_EXPERIMENT_DISCRIMINATOR
-  );
+  return fixEncoderSize(getBytesEncoder(), 8).encode(CREATE_EXPERIMENT_DISCRIMINATOR);
 }
 
 export type CreateExperimentInstruction<
@@ -68,42 +67,28 @@ export type CreateExperimentInstruction<
   TAccountMint extends string | AccountMeta<string> = string,
   TAccountVault extends string | AccountMeta<string> = string,
   TAccountAuthorityTokenAccount extends string | AccountMeta<string> = string,
-  TAccountTokenProgram extends string | AccountMeta<string> =
-    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-  TAccountAssociatedTokenProgram extends string | AccountMeta<string> =
-    "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
-  TAccountSystemProgram extends string | AccountMeta<string> =
-    "11111111111111111111111111111111",
+  TAccountTokenProgram extends string | AccountMeta<string> = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+  TAccountAssociatedTokenProgram extends string | AccountMeta<string> = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+  TAccountSystemProgram extends string | AccountMeta<string> = "11111111111111111111111111111111",
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
   InstructionWithAccounts<
     [
       TAccountAuthority extends string
-        ? WritableSignerAccount<TAccountAuthority> &
-            AccountSignerMeta<TAccountAuthority>
+        ? WritableSignerAccount<TAccountAuthority> & AccountSignerMeta<TAccountAuthority>
         : TAccountAuthority,
-      TAccountExperiment extends string
-        ? WritableAccount<TAccountExperiment>
-        : TAccountExperiment,
-      TAccountMint extends string
-        ? ReadonlyAccount<TAccountMint>
-        : TAccountMint,
-      TAccountVault extends string
-        ? WritableAccount<TAccountVault>
-        : TAccountVault,
+      TAccountExperiment extends string ? WritableAccount<TAccountExperiment> : TAccountExperiment,
+      TAccountMint extends string ? ReadonlyAccount<TAccountMint> : TAccountMint,
+      TAccountVault extends string ? WritableAccount<TAccountVault> : TAccountVault,
       TAccountAuthorityTokenAccount extends string
         ? WritableAccount<TAccountAuthorityTokenAccount>
         : TAccountAuthorityTokenAccount,
-      TAccountTokenProgram extends string
-        ? ReadonlyAccount<TAccountTokenProgram>
-        : TAccountTokenProgram,
+      TAccountTokenProgram extends string ? ReadonlyAccount<TAccountTokenProgram> : TAccountTokenProgram,
       TAccountAssociatedTokenProgram extends string
         ? ReadonlyAccount<TAccountAssociatedTokenProgram>
         : TAccountAssociatedTokenProgram,
-      TAccountSystemProgram extends string
-        ? ReadonlyAccount<TAccountSystemProgram>
-        : TAccountSystemProgram,
+      TAccountSystemProgram extends string ? ReadonlyAccount<TAccountSystemProgram> : TAccountSystemProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -178,10 +163,7 @@ export function getCreateExperimentInstructionDataCodec(): FixedSizeCodec<
   CreateExperimentInstructionDataArgs,
   CreateExperimentInstructionData
 > {
-  return combineCodec(
-    getCreateExperimentInstructionDataEncoder(),
-    getCreateExperimentInstructionDataDecoder()
-  );
+  return combineCodec(getCreateExperimentInstructionDataEncoder(), getCreateExperimentInstructionDataDecoder());
 }
 
 export type CreateExperimentAsyncInput<
@@ -189,14 +171,10 @@ export type CreateExperimentAsyncInput<
   TAccountExperiment extends InstructionAccountInput = InstructionAccountInput,
   TAccountMint extends InstructionAccountInput = InstructionAccountInput,
   TAccountVault extends InstructionAccountInput = InstructionAccountInput,
-  TAccountAuthorityTokenAccount extends InstructionAccountInput =
-    InstructionAccountInput,
-  TAccountTokenProgram extends InstructionAccountInput =
-    InstructionAccountInput,
-  TAccountAssociatedTokenProgram extends InstructionAccountInput =
-    InstructionAccountInput,
-  TAccountSystemProgram extends InstructionAccountInput =
-    InstructionAccountInput,
+  TAccountAuthorityTokenAccount extends InstructionAccountInput = InstructionAccountInput,
+  TAccountTokenProgram extends InstructionAccountInput = InstructionAccountInput,
+  TAccountAssociatedTokenProgram extends InstructionAccountInput = InstructionAccountInput,
+  TAccountSystemProgram extends InstructionAccountInput = InstructionAccountInput,
 > = {
   authority: TAccountAuthority;
   experiment: TAccountExperiment;
@@ -244,38 +222,20 @@ export async function getCreateExperimentInstructionAsync<
 ): Promise<
   CreateExperimentInstruction<
     TProgramAddress,
-    ResolvedInstructionAccountMeta<
-      TAccountAuthority,
-      InstructionAccountInputAddress<TAccountAuthority>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountExperiment,
-      InstructionAccountInputAddress<TAccountExperiment>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountMint,
-      InstructionAccountInputAddress<TAccountMint>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountVault,
-      InstructionAccountInputAddress<TAccountVault>
-    >,
+    ResolvedInstructionAccountMeta<TAccountAuthority, InstructionAccountInputAddress<TAccountAuthority>>,
+    ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+    ResolvedInstructionAccountMeta<TAccountMint, InstructionAccountInputAddress<TAccountMint>>,
+    ResolvedInstructionAccountMeta<TAccountVault, InstructionAccountInputAddress<TAccountVault>>,
     ResolvedInstructionAccountMeta<
       TAccountAuthorityTokenAccount,
       InstructionAccountInputAddress<TAccountAuthorityTokenAccount>
     >,
-    ResolvedInstructionAccountMeta<
-      TAccountTokenProgram,
-      InstructionAccountInputAddress<TAccountTokenProgram>
-    >,
+    ResolvedInstructionAccountMeta<TAccountTokenProgram, InstructionAccountInputAddress<TAccountTokenProgram>>,
     ResolvedInstructionAccountMeta<
       TAccountAssociatedTokenProgram,
       InstructionAccountInputAddress<TAccountAssociatedTokenProgram>
     >,
-    ResolvedInstructionAccountMeta<
-      TAccountSystemProgram,
-      InstructionAccountInputAddress<TAccountSystemProgram>
-    >
+    ResolvedInstructionAccountMeta<TAccountSystemProgram, InstructionAccountInputAddress<TAccountSystemProgram>>
   >
 > {
   // Program address.
@@ -286,43 +246,16 @@ export async function getCreateExperimentInstructionAsync<
 
   // Original accounts.
   const originalAccounts = {
-    authority: {
-      value: input.authority ?? null,
-      isSigner: true,
-      isWritable: true,
-    },
-    experiment: {
-      value: input.experiment ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
+    authority: { value: input.authority ?? null, isSigner: true, isWritable: true },
+    experiment: { value: input.experiment ?? null, isSigner: false, isWritable: true },
     mint: { value: input.mint ?? null, isSigner: false, isWritable: false },
     vault: { value: input.vault ?? null, isSigner: false, isWritable: true },
-    authorityTokenAccount: {
-      value: input.authorityTokenAccount ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
-    tokenProgram: {
-      value: input.tokenProgram ?? null,
-      isSigner: false,
-      isWritable: false,
-    },
-    associatedTokenProgram: {
-      value: input.associatedTokenProgram ?? null,
-      isSigner: false,
-      isWritable: false,
-    },
-    systemProgram: {
-      value: input.systemProgram ?? null,
-      isSigner: false,
-      isWritable: false,
-    },
+    authorityTokenAccount: { value: input.authorityTokenAccount ?? null, isSigner: false, isWritable: true },
+    tokenProgram: { value: input.tokenProgram ?? null, isSigner: false, isWritable: false },
+    associatedTokenProgram: { value: input.associatedTokenProgram ?? null, isSigner: false, isWritable: false },
+    systemProgram: { value: input.systemProgram ?? null, isSigner: false, isWritable: false },
   };
-  const accounts = originalAccounts as Record<
-    keyof typeof originalAccounts,
-    ResolvedInstructionAccount
-  >;
+  const accounts = originalAccounts as Record<keyof typeof originalAccounts, ResolvedInstructionAccount>;
 
   // Original args.
   const args = { ...input };
@@ -337,21 +270,11 @@ export async function getCreateExperimentInstructionAsync<
       programAddress:
         "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address<"ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL">,
       seeds: [
+        getAddressEncoder().encode(getAddressFromResolvedInstructionAccount("experiment", accounts.experiment.value)),
         getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "experiment",
-            accounts.experiment.value
-          )
+          getAddressFromResolvedInstructionAccount("tokenProgram", accounts.tokenProgram.value)
         ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "tokenProgram",
-            accounts.tokenProgram.value
-          )
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount("mint", accounts.mint.value)
-        ),
+        getAddressEncoder().encode(getAddressFromResolvedInstructionAccount("mint", accounts.mint.value)),
       ],
     });
   }
@@ -360,8 +283,7 @@ export async function getCreateExperimentInstructionAsync<
       "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address<"ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL">;
   }
   if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;
+    accounts.systemProgram.value = "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;
   }
 
   return Object.freeze({
@@ -375,44 +297,24 @@ export async function getCreateExperimentInstructionAsync<
       getAccountMeta("associatedTokenProgram", accounts.associatedTokenProgram),
       getAccountMeta("systemProgram", accounts.systemProgram),
     ],
-    data: getCreateExperimentInstructionDataEncoder().encode(
-      args as CreateExperimentInstructionDataArgs
-    ),
+    data: getCreateExperimentInstructionDataEncoder().encode(args as CreateExperimentInstructionDataArgs),
     programAddress,
   } as CreateExperimentInstruction<
     TProgramAddress,
-    ResolvedInstructionAccountMeta<
-      TAccountAuthority,
-      InstructionAccountInputAddress<TAccountAuthority>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountExperiment,
-      InstructionAccountInputAddress<TAccountExperiment>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountMint,
-      InstructionAccountInputAddress<TAccountMint>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountVault,
-      InstructionAccountInputAddress<TAccountVault>
-    >,
+    ResolvedInstructionAccountMeta<TAccountAuthority, InstructionAccountInputAddress<TAccountAuthority>>,
+    ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+    ResolvedInstructionAccountMeta<TAccountMint, InstructionAccountInputAddress<TAccountMint>>,
+    ResolvedInstructionAccountMeta<TAccountVault, InstructionAccountInputAddress<TAccountVault>>,
     ResolvedInstructionAccountMeta<
       TAccountAuthorityTokenAccount,
       InstructionAccountInputAddress<TAccountAuthorityTokenAccount>
     >,
-    ResolvedInstructionAccountMeta<
-      TAccountTokenProgram,
-      InstructionAccountInputAddress<TAccountTokenProgram>
-    >,
+    ResolvedInstructionAccountMeta<TAccountTokenProgram, InstructionAccountInputAddress<TAccountTokenProgram>>,
     ResolvedInstructionAccountMeta<
       TAccountAssociatedTokenProgram,
       InstructionAccountInputAddress<TAccountAssociatedTokenProgram>
     >,
-    ResolvedInstructionAccountMeta<
-      TAccountSystemProgram,
-      InstructionAccountInputAddress<TAccountSystemProgram>
-    >
+    ResolvedInstructionAccountMeta<TAccountSystemProgram, InstructionAccountInputAddress<TAccountSystemProgram>>
   >);
 }
 
@@ -421,14 +323,10 @@ export type CreateExperimentInput<
   TAccountExperiment extends InstructionAccountInput = InstructionAccountInput,
   TAccountMint extends InstructionAccountInput = InstructionAccountInput,
   TAccountVault extends InstructionAccountInput = InstructionAccountInput,
-  TAccountAuthorityTokenAccount extends InstructionAccountInput =
-    InstructionAccountInput,
-  TAccountTokenProgram extends InstructionAccountInput =
-    InstructionAccountInput,
-  TAccountAssociatedTokenProgram extends InstructionAccountInput =
-    InstructionAccountInput,
-  TAccountSystemProgram extends InstructionAccountInput =
-    InstructionAccountInput,
+  TAccountAuthorityTokenAccount extends InstructionAccountInput = InstructionAccountInput,
+  TAccountTokenProgram extends InstructionAccountInput = InstructionAccountInput,
+  TAccountAssociatedTokenProgram extends InstructionAccountInput = InstructionAccountInput,
+  TAccountSystemProgram extends InstructionAccountInput = InstructionAccountInput,
 > = {
   authority: TAccountAuthority;
   experiment: TAccountExperiment;
@@ -475,38 +373,20 @@ export function getCreateExperimentInstruction<
   config?: { programAddress?: TProgramAddress }
 ): CreateExperimentInstruction<
   TProgramAddress,
-  ResolvedInstructionAccountMeta<
-    TAccountAuthority,
-    InstructionAccountInputAddress<TAccountAuthority>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountExperiment,
-    InstructionAccountInputAddress<TAccountExperiment>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountMint,
-    InstructionAccountInputAddress<TAccountMint>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountVault,
-    InstructionAccountInputAddress<TAccountVault>
-  >,
+  ResolvedInstructionAccountMeta<TAccountAuthority, InstructionAccountInputAddress<TAccountAuthority>>,
+  ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+  ResolvedInstructionAccountMeta<TAccountMint, InstructionAccountInputAddress<TAccountMint>>,
+  ResolvedInstructionAccountMeta<TAccountVault, InstructionAccountInputAddress<TAccountVault>>,
   ResolvedInstructionAccountMeta<
     TAccountAuthorityTokenAccount,
     InstructionAccountInputAddress<TAccountAuthorityTokenAccount>
   >,
-  ResolvedInstructionAccountMeta<
-    TAccountTokenProgram,
-    InstructionAccountInputAddress<TAccountTokenProgram>
-  >,
+  ResolvedInstructionAccountMeta<TAccountTokenProgram, InstructionAccountInputAddress<TAccountTokenProgram>>,
   ResolvedInstructionAccountMeta<
     TAccountAssociatedTokenProgram,
     InstructionAccountInputAddress<TAccountAssociatedTokenProgram>
   >,
-  ResolvedInstructionAccountMeta<
-    TAccountSystemProgram,
-    InstructionAccountInputAddress<TAccountSystemProgram>
-  >
+  ResolvedInstructionAccountMeta<TAccountSystemProgram, InstructionAccountInputAddress<TAccountSystemProgram>>
 > {
   // Program address.
   const programAddress = config?.programAddress ?? REPLICATA_PROGRAM_ADDRESS;
@@ -516,43 +396,16 @@ export function getCreateExperimentInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    authority: {
-      value: input.authority ?? null,
-      isSigner: true,
-      isWritable: true,
-    },
-    experiment: {
-      value: input.experiment ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
+    authority: { value: input.authority ?? null, isSigner: true, isWritable: true },
+    experiment: { value: input.experiment ?? null, isSigner: false, isWritable: true },
     mint: { value: input.mint ?? null, isSigner: false, isWritable: false },
     vault: { value: input.vault ?? null, isSigner: false, isWritable: true },
-    authorityTokenAccount: {
-      value: input.authorityTokenAccount ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
-    tokenProgram: {
-      value: input.tokenProgram ?? null,
-      isSigner: false,
-      isWritable: false,
-    },
-    associatedTokenProgram: {
-      value: input.associatedTokenProgram ?? null,
-      isSigner: false,
-      isWritable: false,
-    },
-    systemProgram: {
-      value: input.systemProgram ?? null,
-      isSigner: false,
-      isWritable: false,
-    },
+    authorityTokenAccount: { value: input.authorityTokenAccount ?? null, isSigner: false, isWritable: true },
+    tokenProgram: { value: input.tokenProgram ?? null, isSigner: false, isWritable: false },
+    associatedTokenProgram: { value: input.associatedTokenProgram ?? null, isSigner: false, isWritable: false },
+    systemProgram: { value: input.systemProgram ?? null, isSigner: false, isWritable: false },
   };
-  const accounts = originalAccounts as Record<
-    keyof typeof originalAccounts,
-    ResolvedInstructionAccount
-  >;
+  const accounts = originalAccounts as Record<keyof typeof originalAccounts, ResolvedInstructionAccount>;
 
   // Original args.
   const args = { ...input };
@@ -567,8 +420,7 @@ export function getCreateExperimentInstruction<
       "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address<"ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL">;
   }
   if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;
+    accounts.systemProgram.value = "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;
   }
 
   return Object.freeze({
@@ -582,44 +434,24 @@ export function getCreateExperimentInstruction<
       getAccountMeta("associatedTokenProgram", accounts.associatedTokenProgram),
       getAccountMeta("systemProgram", accounts.systemProgram),
     ],
-    data: getCreateExperimentInstructionDataEncoder().encode(
-      args as CreateExperimentInstructionDataArgs
-    ),
+    data: getCreateExperimentInstructionDataEncoder().encode(args as CreateExperimentInstructionDataArgs),
     programAddress,
   } as CreateExperimentInstruction<
     TProgramAddress,
-    ResolvedInstructionAccountMeta<
-      TAccountAuthority,
-      InstructionAccountInputAddress<TAccountAuthority>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountExperiment,
-      InstructionAccountInputAddress<TAccountExperiment>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountMint,
-      InstructionAccountInputAddress<TAccountMint>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountVault,
-      InstructionAccountInputAddress<TAccountVault>
-    >,
+    ResolvedInstructionAccountMeta<TAccountAuthority, InstructionAccountInputAddress<TAccountAuthority>>,
+    ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+    ResolvedInstructionAccountMeta<TAccountMint, InstructionAccountInputAddress<TAccountMint>>,
+    ResolvedInstructionAccountMeta<TAccountVault, InstructionAccountInputAddress<TAccountVault>>,
     ResolvedInstructionAccountMeta<
       TAccountAuthorityTokenAccount,
       InstructionAccountInputAddress<TAccountAuthorityTokenAccount>
     >,
-    ResolvedInstructionAccountMeta<
-      TAccountTokenProgram,
-      InstructionAccountInputAddress<TAccountTokenProgram>
-    >,
+    ResolvedInstructionAccountMeta<TAccountTokenProgram, InstructionAccountInputAddress<TAccountTokenProgram>>,
     ResolvedInstructionAccountMeta<
       TAccountAssociatedTokenProgram,
       InstructionAccountInputAddress<TAccountAssociatedTokenProgram>
     >,
-    ResolvedInstructionAccountMeta<
-      TAccountSystemProgram,
-      InstructionAccountInputAddress<TAccountSystemProgram>
-    >
+    ResolvedInstructionAccountMeta<TAccountSystemProgram, InstructionAccountInputAddress<TAccountSystemProgram>>
   >);
 }
 
@@ -641,22 +473,14 @@ export type ParsedCreateExperimentInstruction<
   data: CreateExperimentInstructionData;
 };
 
-export function parseCreateExperimentInstruction<
-  TProgram extends string,
-  TAccountMetas extends readonly AccountMeta[],
->(
-  instruction: Instruction<TProgram> &
-    InstructionWithAccounts<TAccountMetas> &
-    InstructionWithData<ReadonlyUint8Array>
+export function parseCreateExperimentInstruction<TProgram extends string, TAccountMetas extends readonly AccountMeta[]>(
+  instruction: Instruction<TProgram> & InstructionWithAccounts<TAccountMetas> & InstructionWithData<ReadonlyUint8Array>
 ): ParsedCreateExperimentInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 8) {
-    throw new SolanaError(
-      SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
-      {
-        actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 8,
-      }
-    );
+    throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS, {
+      actualAccountMetas: instruction.accounts.length,
+      expectedAccountMetas: 8,
+    });
   }
   let accountIndex = 0;
   const getNextAccount = () => {

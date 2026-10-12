@@ -1,5 +1,5 @@
 // HTTP outcomes of the paid result endpoint (docs/API.md "Payment failures") → UI errors.
-import { errorText, insufficientFunds, txError, userRejected, type Faucets, type UiError } from "@/lib/errors";
+import { errorText, insufficientFunds, txError, type Faucets, type UiError } from "@/lib/errors";
 
 export type PaidResponse = {
   status: number;
@@ -72,13 +72,29 @@ export function paymentError(response: PaidResponse, faucets: Faucets): UiError 
   return response.status < 300 ? null : (byStatus[response.status]?.() ?? unexpected(response));
 }
 
-/** Errors thrown by `@x402/fetch` (wallet rejection, unreachable coordinator…). */
+const NETWORK_DOWN = /failed to fetch|networkerror|load failed/i;
+const OVER_BUDGET = /spendControls|exceeds|maxAmountPerPayment/i;
+
+const NETWORK_ERROR = (text: string): UiError => ({
+  kind: "network",
+  title: "Coordinator unreachable",
+  message: text,
+  action: { label: "Try again" },
+});
+
+const OVER_BUDGET_ERROR: UiError = {
+  kind: "unknown",
+  title: "Payment request refused",
+  message: "The coordinator asked for a different token or a higher price than shown. Nothing was paid.",
+  action: { label: "Reload the page and check the price" },
+};
+
+/** Errors thrown by `@x402/fetch` (wallet rejection, unreachable coordinator, unexpected price…). */
 export function thrownPaymentError(error: unknown, faucets: Faucets): UiError {
   const text = errorText(error);
 
-  if (/failed to fetch|networkerror|load failed/i.test(text)) {
-    return { kind: "network", title: "Coordinator unreachable", message: text, action: { label: "Try again" } };
-  }
+  if (NETWORK_DOWN.test(text)) return NETWORK_ERROR(text);
+  if (OVER_BUDGET.test(text)) return OVER_BUDGET_ERROR;
 
-  return /reject|denied|declined|cancel+ed|4001/i.test(text) ? userRejected() : txError(error, faucets);
+  return txError(error, faucets);
 }

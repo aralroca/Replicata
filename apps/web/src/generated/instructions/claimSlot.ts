@@ -43,15 +43,13 @@ import {
 import { findClaimPda, findWorkerProfilePda } from "../pdas";
 import { REPLICATA_PROGRAM_ADDRESS } from "../programs";
 
-export const CLAIM_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([
-  62, 198, 214, 193, 213, 159, 108, 210,
-]);
+export const CLAIM_SLOT_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([62, 198, 214, 193, 213, 159, 108, 210]);
 
-export function getClaimDiscriminatorBytes(): ReadonlyUint8Array {
-  return fixEncoderSize(getBytesEncoder(), 8).encode(CLAIM_DISCRIMINATOR);
+export function getClaimSlotDiscriminatorBytes(): ReadonlyUint8Array {
+  return fixEncoderSize(getBytesEncoder(), 8).encode(CLAIM_SLOT_DISCRIMINATOR);
 }
 
-export type ClaimInstruction<
+export type ClaimSlotInstruction<
   TProgram extends string = typeof REPLICATA_PROGRAM_ADDRESS,
   TAccountWorker extends string | AccountMeta<string> = string,
   TAccountExperiment extends string | AccountMeta<string> = string,
@@ -60,88 +58,62 @@ export type ClaimInstruction<
   TAccountMint extends string | AccountMeta<string> = string,
   TAccountVault extends string | AccountMeta<string> = string,
   TAccountWorkerTokenAccount extends string | AccountMeta<string> = string,
-  TAccountTokenProgram extends string | AccountMeta<string> =
-    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-  TAccountSystemProgram extends string | AccountMeta<string> =
-    "11111111111111111111111111111111",
+  TAccountTokenProgram extends string | AccountMeta<string> = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+  TAccountSystemProgram extends string | AccountMeta<string> = "11111111111111111111111111111111",
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
   InstructionWithAccounts<
     [
       TAccountWorker extends string
-        ? WritableSignerAccount<TAccountWorker> &
-            AccountSignerMeta<TAccountWorker>
+        ? WritableSignerAccount<TAccountWorker> & AccountSignerMeta<TAccountWorker>
         : TAccountWorker,
-      TAccountExperiment extends string
-        ? WritableAccount<TAccountExperiment>
-        : TAccountExperiment,
-      TAccountClaim extends string
-        ? WritableAccount<TAccountClaim>
-        : TAccountClaim,
-      TAccountWorkerProfile extends string
-        ? WritableAccount<TAccountWorkerProfile>
-        : TAccountWorkerProfile,
-      TAccountMint extends string
-        ? ReadonlyAccount<TAccountMint>
-        : TAccountMint,
-      TAccountVault extends string
-        ? WritableAccount<TAccountVault>
-        : TAccountVault,
+      TAccountExperiment extends string ? WritableAccount<TAccountExperiment> : TAccountExperiment,
+      TAccountClaim extends string ? WritableAccount<TAccountClaim> : TAccountClaim,
+      TAccountWorkerProfile extends string ? WritableAccount<TAccountWorkerProfile> : TAccountWorkerProfile,
+      TAccountMint extends string ? ReadonlyAccount<TAccountMint> : TAccountMint,
+      TAccountVault extends string ? WritableAccount<TAccountVault> : TAccountVault,
       TAccountWorkerTokenAccount extends string
         ? WritableAccount<TAccountWorkerTokenAccount>
         : TAccountWorkerTokenAccount,
-      TAccountTokenProgram extends string
-        ? ReadonlyAccount<TAccountTokenProgram>
-        : TAccountTokenProgram,
-      TAccountSystemProgram extends string
-        ? ReadonlyAccount<TAccountSystemProgram>
-        : TAccountSystemProgram,
+      TAccountTokenProgram extends string ? ReadonlyAccount<TAccountTokenProgram> : TAccountTokenProgram,
+      TAccountSystemProgram extends string ? ReadonlyAccount<TAccountSystemProgram> : TAccountSystemProgram,
       ...TRemainingAccounts,
     ]
   >;
 
-export type ClaimInstructionData = { discriminator: ReadonlyUint8Array };
+export type ClaimSlotInstructionData = { discriminator: ReadonlyUint8Array };
 
-export type ClaimInstructionDataArgs = {};
+export type ClaimSlotInstructionDataArgs = {};
 
-export function getClaimInstructionDataEncoder(): FixedSizeEncoder<ClaimInstructionDataArgs> {
-  return transformEncoder(
-    getStructEncoder([["discriminator", fixEncoderSize(getBytesEncoder(), 8)]]),
-    (value) => ({ ...value, discriminator: CLAIM_DISCRIMINATOR })
-  );
+export function getClaimSlotInstructionDataEncoder(): FixedSizeEncoder<ClaimSlotInstructionDataArgs> {
+  return transformEncoder(getStructEncoder([["discriminator", fixEncoderSize(getBytesEncoder(), 8)]]), (value) => ({
+    ...value,
+    discriminator: CLAIM_SLOT_DISCRIMINATOR,
+  }));
 }
 
-export function getClaimInstructionDataDecoder(): FixedSizeDecoder<ClaimInstructionData> {
-  return getStructDecoder([
-    ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
-  ]);
+export function getClaimSlotInstructionDataDecoder(): FixedSizeDecoder<ClaimSlotInstructionData> {
+  return getStructDecoder([["discriminator", fixDecoderSize(getBytesDecoder(), 8)]]);
 }
 
-export function getClaimInstructionDataCodec(): FixedSizeCodec<
-  ClaimInstructionDataArgs,
-  ClaimInstructionData
+export function getClaimSlotInstructionDataCodec(): FixedSizeCodec<
+  ClaimSlotInstructionDataArgs,
+  ClaimSlotInstructionData
 > {
-  return combineCodec(
-    getClaimInstructionDataEncoder(),
-    getClaimInstructionDataDecoder()
-  );
+  return combineCodec(getClaimSlotInstructionDataEncoder(), getClaimSlotInstructionDataDecoder());
 }
 
-export type ClaimAsyncInput<
+export type ClaimSlotAsyncInput<
   TAccountWorker extends InstructionSignerInput = InstructionSignerInput,
   TAccountExperiment extends InstructionAccountInput = InstructionAccountInput,
   TAccountClaim extends InstructionAccountInput = InstructionAccountInput,
-  TAccountWorkerProfile extends InstructionAccountInput =
-    InstructionAccountInput,
+  TAccountWorkerProfile extends InstructionAccountInput = InstructionAccountInput,
   TAccountMint extends InstructionAccountInput = InstructionAccountInput,
   TAccountVault extends InstructionAccountInput = InstructionAccountInput,
-  TAccountWorkerTokenAccount extends InstructionAccountInput =
-    InstructionAccountInput,
-  TAccountTokenProgram extends InstructionAccountInput =
-    InstructionAccountInput,
-  TAccountSystemProgram extends InstructionAccountInput =
-    InstructionAccountInput,
+  TAccountWorkerTokenAccount extends InstructionAccountInput = InstructionAccountInput,
+  TAccountTokenProgram extends InstructionAccountInput = InstructionAccountInput,
+  TAccountSystemProgram extends InstructionAccountInput = InstructionAccountInput,
 > = {
   worker: TAccountWorker;
   experiment: TAccountExperiment;
@@ -154,7 +126,7 @@ export type ClaimAsyncInput<
   systemProgram?: TAccountSystemProgram;
 };
 
-export async function getClaimInstructionAsync<
+export async function getClaimSlotInstructionAsync<
   TAccountWorker extends InstructionSignerInput,
   TAccountExperiment extends InstructionAccountInput,
   TAccountClaim extends InstructionAccountInput,
@@ -166,7 +138,7 @@ export async function getClaimInstructionAsync<
   TAccountSystemProgram extends InstructionAccountInput,
   TProgramAddress extends Address = typeof REPLICATA_PROGRAM_ADDRESS,
 >(
-  input: ClaimAsyncInput<
+  input: ClaimSlotAsyncInput<
     TAccountWorker,
     TAccountExperiment,
     TAccountClaim,
@@ -179,44 +151,20 @@ export async function getClaimInstructionAsync<
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
-  ClaimInstruction<
+  ClaimSlotInstruction<
     TProgramAddress,
-    ResolvedInstructionAccountMeta<
-      TAccountWorker,
-      InstructionAccountInputAddress<TAccountWorker>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountExperiment,
-      InstructionAccountInputAddress<TAccountExperiment>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountClaim,
-      InstructionAccountInputAddress<TAccountClaim>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountWorkerProfile,
-      InstructionAccountInputAddress<TAccountWorkerProfile>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountMint,
-      InstructionAccountInputAddress<TAccountMint>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountVault,
-      InstructionAccountInputAddress<TAccountVault>
-    >,
+    ResolvedInstructionAccountMeta<TAccountWorker, InstructionAccountInputAddress<TAccountWorker>>,
+    ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+    ResolvedInstructionAccountMeta<TAccountClaim, InstructionAccountInputAddress<TAccountClaim>>,
+    ResolvedInstructionAccountMeta<TAccountWorkerProfile, InstructionAccountInputAddress<TAccountWorkerProfile>>,
+    ResolvedInstructionAccountMeta<TAccountMint, InstructionAccountInputAddress<TAccountMint>>,
+    ResolvedInstructionAccountMeta<TAccountVault, InstructionAccountInputAddress<TAccountVault>>,
     ResolvedInstructionAccountMeta<
       TAccountWorkerTokenAccount,
       InstructionAccountInputAddress<TAccountWorkerTokenAccount>
     >,
-    ResolvedInstructionAccountMeta<
-      TAccountTokenProgram,
-      InstructionAccountInputAddress<TAccountTokenProgram>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountSystemProgram,
-      InstructionAccountInputAddress<TAccountSystemProgram>
-    >
+    ResolvedInstructionAccountMeta<TAccountTokenProgram, InstructionAccountInputAddress<TAccountTokenProgram>>,
+    ResolvedInstructionAccountMeta<TAccountSystemProgram, InstructionAccountInputAddress<TAccountSystemProgram>>
   >
 > {
   // Program address.
@@ -228,64 +176,30 @@ export async function getClaimInstructionAsync<
   // Original accounts.
   const originalAccounts = {
     worker: { value: input.worker ?? null, isSigner: true, isWritable: true },
-    experiment: {
-      value: input.experiment ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
+    experiment: { value: input.experiment ?? null, isSigner: false, isWritable: true },
     claim: { value: input.claim ?? null, isSigner: false, isWritable: true },
-    workerProfile: {
-      value: input.workerProfile ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
+    workerProfile: { value: input.workerProfile ?? null, isSigner: false, isWritable: true },
     mint: { value: input.mint ?? null, isSigner: false, isWritable: false },
     vault: { value: input.vault ?? null, isSigner: false, isWritable: true },
-    workerTokenAccount: {
-      value: input.workerTokenAccount ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
-    tokenProgram: {
-      value: input.tokenProgram ?? null,
-      isSigner: false,
-      isWritable: false,
-    },
-    systemProgram: {
-      value: input.systemProgram ?? null,
-      isSigner: false,
-      isWritable: false,
-    },
+    workerTokenAccount: { value: input.workerTokenAccount ?? null, isSigner: false, isWritable: true },
+    tokenProgram: { value: input.tokenProgram ?? null, isSigner: false, isWritable: false },
+    systemProgram: { value: input.systemProgram ?? null, isSigner: false, isWritable: false },
   };
-  const accounts = originalAccounts as Record<
-    keyof typeof originalAccounts,
-    ResolvedInstructionAccount
-  >;
+  const accounts = originalAccounts as Record<keyof typeof originalAccounts, ResolvedInstructionAccount>;
 
   // Resolve default values.
   if (!accounts.claim.value) {
     accounts.claim.value = await findClaimPda(
       {
-        experiment: getAddressFromResolvedInstructionAccount(
-          "experiment",
-          accounts.experiment.value
-        ),
-        worker: getAddressFromResolvedInstructionAccount(
-          "worker",
-          accounts.worker.value
-        ),
+        experiment: getAddressFromResolvedInstructionAccount("experiment", accounts.experiment.value),
+        worker: getAddressFromResolvedInstructionAccount("worker", accounts.worker.value),
       },
       { programAddress }
     );
   }
   if (!accounts.workerProfile.value) {
     accounts.workerProfile.value = await findWorkerProfilePda(
-      {
-        worker: getAddressFromResolvedInstructionAccount(
-          "worker",
-          accounts.worker.value
-        ),
-      },
+      { worker: getAddressFromResolvedInstructionAccount("worker", accounts.worker.value) },
       { programAddress }
     );
   }
@@ -294,8 +208,7 @@ export async function getClaimInstructionAsync<
       "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address<"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA">;
   }
   if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;
+    accounts.systemProgram.value = "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;
   }
 
   return Object.freeze({
@@ -310,63 +223,35 @@ export async function getClaimInstructionAsync<
       getAccountMeta("tokenProgram", accounts.tokenProgram),
       getAccountMeta("systemProgram", accounts.systemProgram),
     ],
-    data: getClaimInstructionDataEncoder().encode({}),
+    data: getClaimSlotInstructionDataEncoder().encode({}),
     programAddress,
-  } as ClaimInstruction<
+  } as ClaimSlotInstruction<
     TProgramAddress,
-    ResolvedInstructionAccountMeta<
-      TAccountWorker,
-      InstructionAccountInputAddress<TAccountWorker>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountExperiment,
-      InstructionAccountInputAddress<TAccountExperiment>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountClaim,
-      InstructionAccountInputAddress<TAccountClaim>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountWorkerProfile,
-      InstructionAccountInputAddress<TAccountWorkerProfile>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountMint,
-      InstructionAccountInputAddress<TAccountMint>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountVault,
-      InstructionAccountInputAddress<TAccountVault>
-    >,
+    ResolvedInstructionAccountMeta<TAccountWorker, InstructionAccountInputAddress<TAccountWorker>>,
+    ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+    ResolvedInstructionAccountMeta<TAccountClaim, InstructionAccountInputAddress<TAccountClaim>>,
+    ResolvedInstructionAccountMeta<TAccountWorkerProfile, InstructionAccountInputAddress<TAccountWorkerProfile>>,
+    ResolvedInstructionAccountMeta<TAccountMint, InstructionAccountInputAddress<TAccountMint>>,
+    ResolvedInstructionAccountMeta<TAccountVault, InstructionAccountInputAddress<TAccountVault>>,
     ResolvedInstructionAccountMeta<
       TAccountWorkerTokenAccount,
       InstructionAccountInputAddress<TAccountWorkerTokenAccount>
     >,
-    ResolvedInstructionAccountMeta<
-      TAccountTokenProgram,
-      InstructionAccountInputAddress<TAccountTokenProgram>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountSystemProgram,
-      InstructionAccountInputAddress<TAccountSystemProgram>
-    >
+    ResolvedInstructionAccountMeta<TAccountTokenProgram, InstructionAccountInputAddress<TAccountTokenProgram>>,
+    ResolvedInstructionAccountMeta<TAccountSystemProgram, InstructionAccountInputAddress<TAccountSystemProgram>>
   >);
 }
 
-export type ClaimInput<
+export type ClaimSlotInput<
   TAccountWorker extends InstructionSignerInput = InstructionSignerInput,
   TAccountExperiment extends InstructionAccountInput = InstructionAccountInput,
   TAccountClaim extends InstructionAccountInput = InstructionAccountInput,
-  TAccountWorkerProfile extends InstructionAccountInput =
-    InstructionAccountInput,
+  TAccountWorkerProfile extends InstructionAccountInput = InstructionAccountInput,
   TAccountMint extends InstructionAccountInput = InstructionAccountInput,
   TAccountVault extends InstructionAccountInput = InstructionAccountInput,
-  TAccountWorkerTokenAccount extends InstructionAccountInput =
-    InstructionAccountInput,
-  TAccountTokenProgram extends InstructionAccountInput =
-    InstructionAccountInput,
-  TAccountSystemProgram extends InstructionAccountInput =
-    InstructionAccountInput,
+  TAccountWorkerTokenAccount extends InstructionAccountInput = InstructionAccountInput,
+  TAccountTokenProgram extends InstructionAccountInput = InstructionAccountInput,
+  TAccountSystemProgram extends InstructionAccountInput = InstructionAccountInput,
 > = {
   worker: TAccountWorker;
   experiment: TAccountExperiment;
@@ -379,7 +264,7 @@ export type ClaimInput<
   systemProgram?: TAccountSystemProgram;
 };
 
-export function getClaimInstruction<
+export function getClaimSlotInstruction<
   TAccountWorker extends InstructionSignerInput,
   TAccountExperiment extends InstructionAccountInput,
   TAccountClaim extends InstructionAccountInput,
@@ -391,7 +276,7 @@ export function getClaimInstruction<
   TAccountSystemProgram extends InstructionAccountInput,
   TProgramAddress extends Address = typeof REPLICATA_PROGRAM_ADDRESS,
 >(
-  input: ClaimInput<
+  input: ClaimSlotInput<
     TAccountWorker,
     TAccountExperiment,
     TAccountClaim,
@@ -403,44 +288,20 @@ export function getClaimInstruction<
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): ClaimInstruction<
+): ClaimSlotInstruction<
   TProgramAddress,
-  ResolvedInstructionAccountMeta<
-    TAccountWorker,
-    InstructionAccountInputAddress<TAccountWorker>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountExperiment,
-    InstructionAccountInputAddress<TAccountExperiment>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountClaim,
-    InstructionAccountInputAddress<TAccountClaim>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountWorkerProfile,
-    InstructionAccountInputAddress<TAccountWorkerProfile>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountMint,
-    InstructionAccountInputAddress<TAccountMint>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountVault,
-    InstructionAccountInputAddress<TAccountVault>
-  >,
+  ResolvedInstructionAccountMeta<TAccountWorker, InstructionAccountInputAddress<TAccountWorker>>,
+  ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+  ResolvedInstructionAccountMeta<TAccountClaim, InstructionAccountInputAddress<TAccountClaim>>,
+  ResolvedInstructionAccountMeta<TAccountWorkerProfile, InstructionAccountInputAddress<TAccountWorkerProfile>>,
+  ResolvedInstructionAccountMeta<TAccountMint, InstructionAccountInputAddress<TAccountMint>>,
+  ResolvedInstructionAccountMeta<TAccountVault, InstructionAccountInputAddress<TAccountVault>>,
   ResolvedInstructionAccountMeta<
     TAccountWorkerTokenAccount,
     InstructionAccountInputAddress<TAccountWorkerTokenAccount>
   >,
-  ResolvedInstructionAccountMeta<
-    TAccountTokenProgram,
-    InstructionAccountInputAddress<TAccountTokenProgram>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountSystemProgram,
-    InstructionAccountInputAddress<TAccountSystemProgram>
-  >
+  ResolvedInstructionAccountMeta<TAccountTokenProgram, InstructionAccountInputAddress<TAccountTokenProgram>>,
+  ResolvedInstructionAccountMeta<TAccountSystemProgram, InstructionAccountInputAddress<TAccountSystemProgram>>
 > {
   // Program address.
   const programAddress = config?.programAddress ?? REPLICATA_PROGRAM_ADDRESS;
@@ -451,39 +312,16 @@ export function getClaimInstruction<
   // Original accounts.
   const originalAccounts = {
     worker: { value: input.worker ?? null, isSigner: true, isWritable: true },
-    experiment: {
-      value: input.experiment ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
+    experiment: { value: input.experiment ?? null, isSigner: false, isWritable: true },
     claim: { value: input.claim ?? null, isSigner: false, isWritable: true },
-    workerProfile: {
-      value: input.workerProfile ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
+    workerProfile: { value: input.workerProfile ?? null, isSigner: false, isWritable: true },
     mint: { value: input.mint ?? null, isSigner: false, isWritable: false },
     vault: { value: input.vault ?? null, isSigner: false, isWritable: true },
-    workerTokenAccount: {
-      value: input.workerTokenAccount ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
-    tokenProgram: {
-      value: input.tokenProgram ?? null,
-      isSigner: false,
-      isWritable: false,
-    },
-    systemProgram: {
-      value: input.systemProgram ?? null,
-      isSigner: false,
-      isWritable: false,
-    },
+    workerTokenAccount: { value: input.workerTokenAccount ?? null, isSigner: false, isWritable: true },
+    tokenProgram: { value: input.tokenProgram ?? null, isSigner: false, isWritable: false },
+    systemProgram: { value: input.systemProgram ?? null, isSigner: false, isWritable: false },
   };
-  const accounts = originalAccounts as Record<
-    keyof typeof originalAccounts,
-    ResolvedInstructionAccount
-  >;
+  const accounts = originalAccounts as Record<keyof typeof originalAccounts, ResolvedInstructionAccount>;
 
   // Resolve default values.
   if (!accounts.tokenProgram.value) {
@@ -491,8 +329,7 @@ export function getClaimInstruction<
       "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address<"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA">;
   }
   if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;
+    accounts.systemProgram.value = "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;
   }
 
   return Object.freeze({
@@ -507,50 +344,26 @@ export function getClaimInstruction<
       getAccountMeta("tokenProgram", accounts.tokenProgram),
       getAccountMeta("systemProgram", accounts.systemProgram),
     ],
-    data: getClaimInstructionDataEncoder().encode({}),
+    data: getClaimSlotInstructionDataEncoder().encode({}),
     programAddress,
-  } as ClaimInstruction<
+  } as ClaimSlotInstruction<
     TProgramAddress,
-    ResolvedInstructionAccountMeta<
-      TAccountWorker,
-      InstructionAccountInputAddress<TAccountWorker>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountExperiment,
-      InstructionAccountInputAddress<TAccountExperiment>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountClaim,
-      InstructionAccountInputAddress<TAccountClaim>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountWorkerProfile,
-      InstructionAccountInputAddress<TAccountWorkerProfile>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountMint,
-      InstructionAccountInputAddress<TAccountMint>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountVault,
-      InstructionAccountInputAddress<TAccountVault>
-    >,
+    ResolvedInstructionAccountMeta<TAccountWorker, InstructionAccountInputAddress<TAccountWorker>>,
+    ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+    ResolvedInstructionAccountMeta<TAccountClaim, InstructionAccountInputAddress<TAccountClaim>>,
+    ResolvedInstructionAccountMeta<TAccountWorkerProfile, InstructionAccountInputAddress<TAccountWorkerProfile>>,
+    ResolvedInstructionAccountMeta<TAccountMint, InstructionAccountInputAddress<TAccountMint>>,
+    ResolvedInstructionAccountMeta<TAccountVault, InstructionAccountInputAddress<TAccountVault>>,
     ResolvedInstructionAccountMeta<
       TAccountWorkerTokenAccount,
       InstructionAccountInputAddress<TAccountWorkerTokenAccount>
     >,
-    ResolvedInstructionAccountMeta<
-      TAccountTokenProgram,
-      InstructionAccountInputAddress<TAccountTokenProgram>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountSystemProgram,
-      InstructionAccountInputAddress<TAccountSystemProgram>
-    >
+    ResolvedInstructionAccountMeta<TAccountTokenProgram, InstructionAccountInputAddress<TAccountTokenProgram>>,
+    ResolvedInstructionAccountMeta<TAccountSystemProgram, InstructionAccountInputAddress<TAccountSystemProgram>>
   >);
 }
 
-export type ParsedClaimInstruction<
+export type ParsedClaimSlotInstruction<
   TProgram extends string = typeof REPLICATA_PROGRAM_ADDRESS,
   TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[],
 > = {
@@ -566,25 +379,17 @@ export type ParsedClaimInstruction<
     tokenProgram: TAccountMetas[7];
     systemProgram: TAccountMetas[8];
   };
-  data: ClaimInstructionData;
+  data: ClaimSlotInstructionData;
 };
 
-export function parseClaimInstruction<
-  TProgram extends string,
-  TAccountMetas extends readonly AccountMeta[],
->(
-  instruction: Instruction<TProgram> &
-    InstructionWithAccounts<TAccountMetas> &
-    InstructionWithData<ReadonlyUint8Array>
-): ParsedClaimInstruction<TProgram, TAccountMetas> {
+export function parseClaimSlotInstruction<TProgram extends string, TAccountMetas extends readonly AccountMeta[]>(
+  instruction: Instruction<TProgram> & InstructionWithAccounts<TAccountMetas> & InstructionWithData<ReadonlyUint8Array>
+): ParsedClaimSlotInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 9) {
-    throw new SolanaError(
-      SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
-      {
-        actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 9,
-      }
-    );
+    throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS, {
+      actualAccountMetas: instruction.accounts.length,
+      expectedAccountMetas: 9,
+    });
   }
   let accountIndex = 0;
   const getNextAccount = () => {
@@ -605,6 +410,6 @@ export function parseClaimInstruction<
       tokenProgram: getNextAccount(),
       systemProgram: getNextAccount(),
     },
-    data: getClaimInstructionDataDecoder().decode(instruction.data),
+    data: getClaimSlotInstructionDataDecoder().decode(instruction.data),
   };
 }

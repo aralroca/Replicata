@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { ExperimentList } from "@/components/experiment-feed";
-import { ExplorerLink, LoadFailed, Loading, Stat } from "@/components/ui";
+import { ExplorerLink, KeyLink, LoadFailed, Loading, Stat } from "@/components/ui";
 import { useAuthor, useWorker } from "@/hooks/use-coordinator";
 import { formatUsdc } from "@/lib/amounts";
-import { shortHash } from "@/lib/hex";
 import type { AuthorView, WorkerView } from "@/lib/types";
 
 function reputation(worker: WorkerView): string {
@@ -15,17 +14,25 @@ function reputation(worker: WorkerView): string {
   return decided === 0 ? "—" : `${Math.round((worker.ok / decided) * 100)}%`;
 }
 
+function HistoryList({ history }: { history: WorkerView["history"] }) {
+  const items = history.map((item) => (
+    <li key={item.experiment}>
+      <KeyLink prefix="/e" value={item.experiment} /> · {item.state}
+    </li>
+  ));
+
+  return <ul className="grid gap-2 text-sm">{items}</ul>;
+}
+
 function WorkerHistory({ history }: { history: WorkerView["history"] }) {
-  return history.length === 0 ? (
-    <p className="text-sm text-muted">No replications yet.</p>
-  ) : (
-    <ul className="grid gap-2 text-sm">
-      {history.map((item) => (
-        <li key={item.experiment}>
-          <Link href={`/e/${item.experiment}`} className="mono">{shortHash(item.experiment)}</Link> · {item.state}
-        </li>
-      ))}
-    </ul>
+  return (
+    <section aria-label="History" className="card">
+      {history.length === 0 ? (
+        <p className="text-sm text-muted">No replications yet.</p>
+      ) : (
+        <HistoryList history={history} />
+      )}
+    </section>
   );
 }
 
@@ -41,7 +48,7 @@ function WorkerStats({ worker }: { worker: WorkerView }) {
   );
 }
 
-function ProfileTitle({ kind, pubkey }: { kind: string; pubkey: string }) {
+function ProfileHeader({ kind, pubkey }: { kind: string; pubkey: string }) {
   return (
     <header>
       <h1 className="text-2xl font-bold">{kind}</h1>
@@ -52,18 +59,13 @@ function ProfileTitle({ kind, pubkey }: { kind: string; pubkey: string }) {
   );
 }
 
-export function WorkerProfile({ pubkey }: { pubkey: string }) {
-  const { data, error } = useWorker(pubkey);
-
-  if (error) return <LoadFailed what="the worker" error={error} />;
-
-  return data ? (
+function Profile({ kind, pubkey, children }: { kind: string; pubkey: string; children: ReactNode }) {
+  return (
     <div className="grid gap-6">
-      <ProfileTitle kind="Worker" pubkey={pubkey} />
-      <WorkerStats worker={data} />
-      <section aria-label="History" className="card"><WorkerHistory history={data.history} /></section>
+      <ProfileHeader kind={kind} pubkey={pubkey} />
+      {children}
     </div>
-  ) : <Loading />;
+  );
 }
 
 function AuthorStats({ author }: { author: AuthorView }) {
@@ -76,16 +78,30 @@ function AuthorStats({ author }: { author: AuthorView }) {
   );
 }
 
+export function WorkerProfile({ pubkey }: { pubkey: string }) {
+  const { data, error } = useWorker(pubkey);
+
+  if (error) return <LoadFailed what="the worker" error={error} />;
+  if (!data) return <Loading />;
+
+  return (
+    <Profile kind="Worker" pubkey={pubkey}>
+      <WorkerStats worker={data} />
+      <WorkerHistory history={data.history} />
+    </Profile>
+  );
+}
+
 export function ResearcherProfile({ pubkey }: { pubkey: string }) {
   const { data, error } = useAuthor(pubkey);
 
   if (error) return <LoadFailed what="the researcher" error={error} />;
+  if (!data) return <Loading />;
 
-  return data ? (
-    <div className="grid gap-6">
-      <ProfileTitle kind="Researcher" pubkey={pubkey} />
+  return (
+    <Profile kind="Researcher" pubkey={pubkey}>
       <AuthorStats author={data} />
       <ExperimentList experiments={data.experiments} />
-    </div>
-  ) : <Loading />;
+    </Profile>
+  );
 }

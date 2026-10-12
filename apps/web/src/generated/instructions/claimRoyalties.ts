@@ -38,14 +38,10 @@ import {
 } from "@solana/kit/program-client-core";
 import { REPLICATA_PROGRAM_ADDRESS } from "../programs";
 
-export const CLAIM_ROYALTIES_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array(
-  [238, 21, 168, 30, 248, 242, 60, 166]
-);
+export const CLAIM_ROYALTIES_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([238, 21, 168, 30, 248, 242, 60, 166]);
 
 export function getClaimRoyaltiesDiscriminatorBytes(): ReadonlyUint8Array {
-  return fixEncoderSize(getBytesEncoder(), 8).encode(
-    CLAIM_ROYALTIES_DISCRIMINATOR
-  );
+  return fixEncoderSize(getBytesEncoder(), 8).encode(CLAIM_ROYALTIES_DISCRIMINATOR);
 }
 
 export type ClaimRoyaltiesInstruction<
@@ -54,69 +50,51 @@ export type ClaimRoyaltiesInstruction<
   TAccountMint extends string | AccountMeta<string> = string,
   TAccountVault extends string | AccountMeta<string> = string,
   TAccountAuthorityTokenAccount extends string | AccountMeta<string> = string,
-  TAccountTokenProgram extends string | AccountMeta<string> =
-    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+  TAccountTokenProgram extends string | AccountMeta<string> = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
   InstructionWithAccounts<
     [
-      TAccountExperiment extends string
-        ? WritableAccount<TAccountExperiment>
-        : TAccountExperiment,
-      TAccountMint extends string
-        ? ReadonlyAccount<TAccountMint>
-        : TAccountMint,
-      TAccountVault extends string
-        ? WritableAccount<TAccountVault>
-        : TAccountVault,
+      TAccountExperiment extends string ? WritableAccount<TAccountExperiment> : TAccountExperiment,
+      TAccountMint extends string ? ReadonlyAccount<TAccountMint> : TAccountMint,
+      TAccountVault extends string ? WritableAccount<TAccountVault> : TAccountVault,
       TAccountAuthorityTokenAccount extends string
         ? WritableAccount<TAccountAuthorityTokenAccount>
         : TAccountAuthorityTokenAccount,
-      TAccountTokenProgram extends string
-        ? ReadonlyAccount<TAccountTokenProgram>
-        : TAccountTokenProgram,
+      TAccountTokenProgram extends string ? ReadonlyAccount<TAccountTokenProgram> : TAccountTokenProgram,
       ...TRemainingAccounts,
     ]
   >;
 
-export type ClaimRoyaltiesInstructionData = {
-  discriminator: ReadonlyUint8Array;
-};
+export type ClaimRoyaltiesInstructionData = { discriminator: ReadonlyUint8Array };
 
 export type ClaimRoyaltiesInstructionDataArgs = {};
 
 export function getClaimRoyaltiesInstructionDataEncoder(): FixedSizeEncoder<ClaimRoyaltiesInstructionDataArgs> {
-  return transformEncoder(
-    getStructEncoder([["discriminator", fixEncoderSize(getBytesEncoder(), 8)]]),
-    (value) => ({ ...value, discriminator: CLAIM_ROYALTIES_DISCRIMINATOR })
-  );
+  return transformEncoder(getStructEncoder([["discriminator", fixEncoderSize(getBytesEncoder(), 8)]]), (value) => ({
+    ...value,
+    discriminator: CLAIM_ROYALTIES_DISCRIMINATOR,
+  }));
 }
 
 export function getClaimRoyaltiesInstructionDataDecoder(): FixedSizeDecoder<ClaimRoyaltiesInstructionData> {
-  return getStructDecoder([
-    ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
-  ]);
+  return getStructDecoder([["discriminator", fixDecoderSize(getBytesDecoder(), 8)]]);
 }
 
 export function getClaimRoyaltiesInstructionDataCodec(): FixedSizeCodec<
   ClaimRoyaltiesInstructionDataArgs,
   ClaimRoyaltiesInstructionData
 > {
-  return combineCodec(
-    getClaimRoyaltiesInstructionDataEncoder(),
-    getClaimRoyaltiesInstructionDataDecoder()
-  );
+  return combineCodec(getClaimRoyaltiesInstructionDataEncoder(), getClaimRoyaltiesInstructionDataDecoder());
 }
 
 export type ClaimRoyaltiesInput<
   TAccountExperiment extends InstructionAccountInput = InstructionAccountInput,
   TAccountMint extends InstructionAccountInput = InstructionAccountInput,
   TAccountVault extends InstructionAccountInput = InstructionAccountInput,
-  TAccountAuthorityTokenAccount extends InstructionAccountInput =
-    InstructionAccountInput,
-  TAccountTokenProgram extends InstructionAccountInput =
-    InstructionAccountInput,
+  TAccountAuthorityTokenAccount extends InstructionAccountInput = InstructionAccountInput,
+  TAccountTokenProgram extends InstructionAccountInput = InstructionAccountInput,
 > = {
   experiment: TAccountExperiment;
   mint: TAccountMint;
@@ -143,26 +121,14 @@ export function getClaimRoyaltiesInstruction<
   config?: { programAddress?: TProgramAddress }
 ): ClaimRoyaltiesInstruction<
   TProgramAddress,
-  ResolvedInstructionAccountMeta<
-    TAccountExperiment,
-    InstructionAccountInputAddress<TAccountExperiment>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountMint,
-    InstructionAccountInputAddress<TAccountMint>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountVault,
-    InstructionAccountInputAddress<TAccountVault>
-  >,
+  ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+  ResolvedInstructionAccountMeta<TAccountMint, InstructionAccountInputAddress<TAccountMint>>,
+  ResolvedInstructionAccountMeta<TAccountVault, InstructionAccountInputAddress<TAccountVault>>,
   ResolvedInstructionAccountMeta<
     TAccountAuthorityTokenAccount,
     InstructionAccountInputAddress<TAccountAuthorityTokenAccount>
   >,
-  ResolvedInstructionAccountMeta<
-    TAccountTokenProgram,
-    InstructionAccountInputAddress<TAccountTokenProgram>
-  >
+  ResolvedInstructionAccountMeta<TAccountTokenProgram, InstructionAccountInputAddress<TAccountTokenProgram>>
 > {
   // Program address.
   const programAddress = config?.programAddress ?? REPLICATA_PROGRAM_ADDRESS;
@@ -172,28 +138,13 @@ export function getClaimRoyaltiesInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    experiment: {
-      value: input.experiment ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
+    experiment: { value: input.experiment ?? null, isSigner: false, isWritable: true },
     mint: { value: input.mint ?? null, isSigner: false, isWritable: false },
     vault: { value: input.vault ?? null, isSigner: false, isWritable: true },
-    authorityTokenAccount: {
-      value: input.authorityTokenAccount ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
-    tokenProgram: {
-      value: input.tokenProgram ?? null,
-      isSigner: false,
-      isWritable: false,
-    },
+    authorityTokenAccount: { value: input.authorityTokenAccount ?? null, isSigner: false, isWritable: true },
+    tokenProgram: { value: input.tokenProgram ?? null, isSigner: false, isWritable: false },
   };
-  const accounts = originalAccounts as Record<
-    keyof typeof originalAccounts,
-    ResolvedInstructionAccount
-  >;
+  const accounts = originalAccounts as Record<keyof typeof originalAccounts, ResolvedInstructionAccount>;
 
   // Resolve default values.
   if (!accounts.tokenProgram.value) {
@@ -213,26 +164,14 @@ export function getClaimRoyaltiesInstruction<
     programAddress,
   } as ClaimRoyaltiesInstruction<
     TProgramAddress,
-    ResolvedInstructionAccountMeta<
-      TAccountExperiment,
-      InstructionAccountInputAddress<TAccountExperiment>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountMint,
-      InstructionAccountInputAddress<TAccountMint>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountVault,
-      InstructionAccountInputAddress<TAccountVault>
-    >,
+    ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+    ResolvedInstructionAccountMeta<TAccountMint, InstructionAccountInputAddress<TAccountMint>>,
+    ResolvedInstructionAccountMeta<TAccountVault, InstructionAccountInputAddress<TAccountVault>>,
     ResolvedInstructionAccountMeta<
       TAccountAuthorityTokenAccount,
       InstructionAccountInputAddress<TAccountAuthorityTokenAccount>
     >,
-    ResolvedInstructionAccountMeta<
-      TAccountTokenProgram,
-      InstructionAccountInputAddress<TAccountTokenProgram>
-    >
+    ResolvedInstructionAccountMeta<TAccountTokenProgram, InstructionAccountInputAddress<TAccountTokenProgram>>
   >);
 }
 
@@ -251,22 +190,14 @@ export type ParsedClaimRoyaltiesInstruction<
   data: ClaimRoyaltiesInstructionData;
 };
 
-export function parseClaimRoyaltiesInstruction<
-  TProgram extends string,
-  TAccountMetas extends readonly AccountMeta[],
->(
-  instruction: Instruction<TProgram> &
-    InstructionWithAccounts<TAccountMetas> &
-    InstructionWithData<ReadonlyUint8Array>
+export function parseClaimRoyaltiesInstruction<TProgram extends string, TAccountMetas extends readonly AccountMeta[]>(
+  instruction: Instruction<TProgram> & InstructionWithAccounts<TAccountMetas> & InstructionWithData<ReadonlyUint8Array>
 ): ParsedClaimRoyaltiesInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 5) {
-    throw new SolanaError(
-      SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
-      {
-        actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 5,
-      }
-    );
+    throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS, {
+      actualAccountMetas: instruction.accounts.length,
+      expectedAccountMetas: 5,
+    });
   }
   let accountIndex = 0;
   const getNextAccount = () => {

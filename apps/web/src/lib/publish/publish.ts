@@ -38,23 +38,20 @@ export async function publishExperiment(input: PublishInput) {
   input.onStage("signing");
 
   return sendCreateExperiment({
-    signer: input.signer,
-    rpcUrl: RPC_URL,
-    mint: address(input.config.mint),
-    nonce: randomNonce(),
-    specHash,
-    imageDigest: imageDigestBytes(input.spec.image_digest),
-    economics: input.economics,
+    ...{ signer: input.signer, rpcUrl: RPC_URL, mint: address(input.config.mint), nonce: randomNonce() },
+    ...{ specHash, imageDigest: imageDigestBytes(input.spec.image_digest), economics: input.economics },
   });
 }
 
+function specRejected(error: ApiError): UiError {
+  return {
+    kind: "unknown",
+    title: "The coordinator rejected the spec",
+    message: error.message,
+    action: { label: "Go back to step 1 and fix it" },
+  };
+}
+
 export function publishError(error: unknown, config: CoordinatorConfig): UiError {
-  return error instanceof ApiError
-    ? {
-        kind: "unknown",
-        title: "The coordinator rejected the spec",
-        message: error.message,
-        action: { label: "Go back to step 1 and fix it" },
-      }
-    : txError(error, config.faucets);
+  return error instanceof ApiError ? specRejected(error) : txError(error, config.faucets);
 }

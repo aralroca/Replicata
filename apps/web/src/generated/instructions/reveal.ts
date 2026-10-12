@@ -42,9 +42,7 @@ import {
 import { findClaimPda } from "../pdas";
 import { REPLICATA_PROGRAM_ADDRESS } from "../programs";
 
-export const REVEAL_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([
-  9, 35, 59, 190, 167, 249, 76, 115,
-]);
+export const REVEAL_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([9, 35, 59, 190, 167, 249, 76, 115]);
 
 export function getRevealDiscriminatorBytes(): ReadonlyUint8Array {
   return fixEncoderSize(getBytesEncoder(), 8).encode(REVEAL_DISCRIMINATOR);
@@ -61,15 +59,10 @@ export type RevealInstruction<
   InstructionWithAccounts<
     [
       TAccountWorker extends string
-        ? ReadonlySignerAccount<TAccountWorker> &
-            AccountSignerMeta<TAccountWorker>
+        ? ReadonlySignerAccount<TAccountWorker> & AccountSignerMeta<TAccountWorker>
         : TAccountWorker,
-      TAccountExperiment extends string
-        ? WritableAccount<TAccountExperiment>
-        : TAccountExperiment,
-      TAccountClaim extends string
-        ? WritableAccount<TAccountClaim>
-        : TAccountClaim,
+      TAccountExperiment extends string ? WritableAccount<TAccountExperiment> : TAccountExperiment,
+      TAccountClaim extends string ? WritableAccount<TAccountClaim> : TAccountClaim,
       ...TRemainingAccounts,
     ]
   >;
@@ -80,10 +73,7 @@ export type RevealInstructionData = {
   salt: ReadonlyUint8Array;
 };
 
-export type RevealInstructionDataArgs = {
-  outputHash: ReadonlyUint8Array;
-  salt: ReadonlyUint8Array;
-};
+export type RevealInstructionDataArgs = { outputHash: ReadonlyUint8Array; salt: ReadonlyUint8Array };
 
 export function getRevealInstructionDataEncoder(): FixedSizeEncoder<RevealInstructionDataArgs> {
   return transformEncoder(
@@ -104,14 +94,8 @@ export function getRevealInstructionDataDecoder(): FixedSizeDecoder<RevealInstru
   ]);
 }
 
-export function getRevealInstructionDataCodec(): FixedSizeCodec<
-  RevealInstructionDataArgs,
-  RevealInstructionData
-> {
-  return combineCodec(
-    getRevealInstructionDataEncoder(),
-    getRevealInstructionDataDecoder()
-  );
+export function getRevealInstructionDataCodec(): FixedSizeCodec<RevealInstructionDataArgs, RevealInstructionData> {
+  return combineCodec(getRevealInstructionDataEncoder(), getRevealInstructionDataDecoder());
 }
 
 export type RevealAsyncInput<
@@ -137,18 +121,9 @@ export async function getRevealInstructionAsync<
 ): Promise<
   RevealInstruction<
     TProgramAddress,
-    ResolvedInstructionAccountMeta<
-      TAccountWorker,
-      InstructionAccountInputAddress<TAccountWorker>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountExperiment,
-      InstructionAccountInputAddress<TAccountExperiment>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountClaim,
-      InstructionAccountInputAddress<TAccountClaim>
-    >
+    ResolvedInstructionAccountMeta<TAccountWorker, InstructionAccountInputAddress<TAccountWorker>>,
+    ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+    ResolvedInstructionAccountMeta<TAccountClaim, InstructionAccountInputAddress<TAccountClaim>>
   >
 > {
   // Program address.
@@ -160,17 +135,10 @@ export async function getRevealInstructionAsync<
   // Original accounts.
   const originalAccounts = {
     worker: { value: input.worker ?? null, isSigner: true, isWritable: false },
-    experiment: {
-      value: input.experiment ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
+    experiment: { value: input.experiment ?? null, isSigner: false, isWritable: true },
     claim: { value: input.claim ?? null, isSigner: false, isWritable: true },
   };
-  const accounts = originalAccounts as Record<
-    keyof typeof originalAccounts,
-    ResolvedInstructionAccount
-  >;
+  const accounts = originalAccounts as Record<keyof typeof originalAccounts, ResolvedInstructionAccount>;
 
   // Original args.
   const args = { ...input };
@@ -179,14 +147,8 @@ export async function getRevealInstructionAsync<
   if (!accounts.claim.value) {
     accounts.claim.value = await findClaimPda(
       {
-        experiment: getAddressFromResolvedInstructionAccount(
-          "experiment",
-          accounts.experiment.value
-        ),
-        worker: getAddressFromResolvedInstructionAccount(
-          "worker",
-          accounts.worker.value
-        ),
+        experiment: getAddressFromResolvedInstructionAccount("experiment", accounts.experiment.value),
+        worker: getAddressFromResolvedInstructionAccount("worker", accounts.worker.value),
       },
       { programAddress }
     );
@@ -198,24 +160,13 @@ export async function getRevealInstructionAsync<
       getAccountMeta("experiment", accounts.experiment),
       getAccountMeta("claim", accounts.claim),
     ],
-    data: getRevealInstructionDataEncoder().encode(
-      args as RevealInstructionDataArgs
-    ),
+    data: getRevealInstructionDataEncoder().encode(args as RevealInstructionDataArgs),
     programAddress,
   } as RevealInstruction<
     TProgramAddress,
-    ResolvedInstructionAccountMeta<
-      TAccountWorker,
-      InstructionAccountInputAddress<TAccountWorker>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountExperiment,
-      InstructionAccountInputAddress<TAccountExperiment>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountClaim,
-      InstructionAccountInputAddress<TAccountClaim>
-    >
+    ResolvedInstructionAccountMeta<TAccountWorker, InstructionAccountInputAddress<TAccountWorker>>,
+    ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+    ResolvedInstructionAccountMeta<TAccountClaim, InstructionAccountInputAddress<TAccountClaim>>
   >);
 }
 
@@ -241,18 +192,9 @@ export function getRevealInstruction<
   config?: { programAddress?: TProgramAddress }
 ): RevealInstruction<
   TProgramAddress,
-  ResolvedInstructionAccountMeta<
-    TAccountWorker,
-    InstructionAccountInputAddress<TAccountWorker>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountExperiment,
-    InstructionAccountInputAddress<TAccountExperiment>
-  >,
-  ResolvedInstructionAccountMeta<
-    TAccountClaim,
-    InstructionAccountInputAddress<TAccountClaim>
-  >
+  ResolvedInstructionAccountMeta<TAccountWorker, InstructionAccountInputAddress<TAccountWorker>>,
+  ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+  ResolvedInstructionAccountMeta<TAccountClaim, InstructionAccountInputAddress<TAccountClaim>>
 > {
   // Program address.
   const programAddress = config?.programAddress ?? REPLICATA_PROGRAM_ADDRESS;
@@ -263,17 +205,10 @@ export function getRevealInstruction<
   // Original accounts.
   const originalAccounts = {
     worker: { value: input.worker ?? null, isSigner: true, isWritable: false },
-    experiment: {
-      value: input.experiment ?? null,
-      isSigner: false,
-      isWritable: true,
-    },
+    experiment: { value: input.experiment ?? null, isSigner: false, isWritable: true },
     claim: { value: input.claim ?? null, isSigner: false, isWritable: true },
   };
-  const accounts = originalAccounts as Record<
-    keyof typeof originalAccounts,
-    ResolvedInstructionAccount
-  >;
+  const accounts = originalAccounts as Record<keyof typeof originalAccounts, ResolvedInstructionAccount>;
 
   // Original args.
   const args = { ...input };
@@ -284,24 +219,13 @@ export function getRevealInstruction<
       getAccountMeta("experiment", accounts.experiment),
       getAccountMeta("claim", accounts.claim),
     ],
-    data: getRevealInstructionDataEncoder().encode(
-      args as RevealInstructionDataArgs
-    ),
+    data: getRevealInstructionDataEncoder().encode(args as RevealInstructionDataArgs),
     programAddress,
   } as RevealInstruction<
     TProgramAddress,
-    ResolvedInstructionAccountMeta<
-      TAccountWorker,
-      InstructionAccountInputAddress<TAccountWorker>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountExperiment,
-      InstructionAccountInputAddress<TAccountExperiment>
-    >,
-    ResolvedInstructionAccountMeta<
-      TAccountClaim,
-      InstructionAccountInputAddress<TAccountClaim>
-    >
+    ResolvedInstructionAccountMeta<TAccountWorker, InstructionAccountInputAddress<TAccountWorker>>,
+    ResolvedInstructionAccountMeta<TAccountExperiment, InstructionAccountInputAddress<TAccountExperiment>>,
+    ResolvedInstructionAccountMeta<TAccountClaim, InstructionAccountInputAddress<TAccountClaim>>
   >);
 }
 
@@ -318,22 +242,14 @@ export type ParsedRevealInstruction<
   data: RevealInstructionData;
 };
 
-export function parseRevealInstruction<
-  TProgram extends string,
-  TAccountMetas extends readonly AccountMeta[],
->(
-  instruction: Instruction<TProgram> &
-    InstructionWithAccounts<TAccountMetas> &
-    InstructionWithData<ReadonlyUint8Array>
+export function parseRevealInstruction<TProgram extends string, TAccountMetas extends readonly AccountMeta[]>(
+  instruction: Instruction<TProgram> & InstructionWithAccounts<TAccountMetas> & InstructionWithData<ReadonlyUint8Array>
 ): ParsedRevealInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 3) {
-    throw new SolanaError(
-      SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
-      {
-        actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 3,
-      }
-    );
+    throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS, {
+      actualAccountMetas: instruction.accounts.length,
+      expectedAccountMetas: 3,
+    });
   }
   let accountIndex = 0;
   const getNextAccount = () => {
@@ -343,11 +259,7 @@ export function parseRevealInstruction<
   };
   return {
     programAddress: instruction.programAddress,
-    accounts: {
-      worker: getNextAccount(),
-      experiment: getNextAccount(),
-      claim: getNextAccount(),
-    },
+    accounts: { worker: getNextAccount(), experiment: getNextAccount(), claim: getNextAccount() },
     data: getRevealInstructionDataDecoder().decode(instruction.data),
   };
 }

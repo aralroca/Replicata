@@ -19,7 +19,8 @@ export type UiError = { kind: UiErrorKind; title: string; message: string; actio
 
 export type Faucets = { sol: string; usdc: string };
 
-const REJECTED = /reject|denied|declined|cancel+ed|user abort|4001/i;
+const REJECTED =
+  /user rejected|rejected the request|request rejected|denied by (the )?user|declined|cancell?ed by (the )?user|\b4001\b/i;
 const NO_SOL = /insufficient (funds|lamports|balance)|attempt to debit an account but found no record/i;
 const NO_TOKENS = /custom program error: 0x1\b/i;
 const PROGRAM_HEX = /custom program error: 0x(17[0-9a-f]{2})/i;
@@ -65,15 +66,25 @@ function programError(code: number): UiError {
   };
 }
 
+function unknownError(text: string): UiError {
+  return { kind: "unknown", title: "Something went wrong", message: text, action: { label: "Try again" } };
+}
+
+type Matcher = { test: (text: string) => boolean; error: (text: string, faucets: Faucets) => UiError };
+
+/** First match wins, so order matters (a rejection can also mention funds). */
+const TX_MATCHERS: Matcher[] = [
+  { test: (text) => REJECTED.test(text), error: () => userRejected() },
+  { test: (text) => NO_TOKENS.test(text), error: (_, faucets) => insufficientFunds(faucets.usdc, "USDC") },
+  { test: (text) => NO_SOL.test(text), error: (_, faucets) => insufficientFunds(faucets.sol, "SOL") },
+  { test: (text) => programCode(text) !== null, error: (text) => programError(programCode(text) ?? 0) },
+  { test: () => true, error: unknownError },
+];
+
 /** Map an error thrown while building / signing / sending a transaction. */
 export function txError(error: unknown, faucets: Faucets): UiError {
   const text = errorText(error);
-  const code = programCode(text);
+  const matcher = TX_MATCHERS.find((candidate) => candidate.test(text)) ?? TX_MATCHERS[TX_MATCHERS.length - 1];
 
-  if (REJECTED.test(text)) return userRejected();
-  if (NO_TOKENS.test(text)) return insufficientFunds(faucets.usdc, "USDC");
-  if (NO_SOL.test(text)) return insufficientFunds(faucets.sol, "SOL");
-  if (code !== null) return programError(code);
-
-  return { kind: "unknown", title: "Something went wrong", message: text, action: { label: "Try again" } };
+  return matcher.error(text, faucets);
 }

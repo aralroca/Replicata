@@ -16,7 +16,7 @@ function Nav() {
   return (
     <nav aria-label="Main" className="flex flex-wrap items-center gap-4 text-sm">
       {LINKS.map((link) => (
-        <Link key={link.href} href={link.href} className="text-foreground">
+        <Link key={link.href} href={link.href} className="text-foreground no-underline hover:underline">
           {link.label}
         </Link>
       ))}
@@ -24,13 +24,19 @@ function Nav() {
   );
 }
 
+function Brand() {
+  return (
+    <Link href="/" className="text-lg font-bold text-foreground no-underline">
+      Replicata <span className="text-xs font-normal text-muted">{CLUSTER}</span>
+    </Link>
+  );
+}
+
 export function Header() {
   return (
     <header className="border-b border-border">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-4 py-3">
-        <Link href="/" className="text-lg font-bold text-foreground">
-          Replicata <span className="text-xs font-normal text-muted">{CLUSTER}</span>
-        </Link>
+        <Brand />
         <Nav />
         <WalletUiDropdown />
       </div>

@@ -1,19 +1,11 @@
 "use client";
 
-import {
-  createSolanaDevnet,
-  createSolanaLocalnet,
-  createWalletUiConfig,
-  WalletUi,
-} from "@wallet-ui/react";
+import { createSolanaDevnet, createSolanaLocalnet, createWalletUiConfig, WalletUi } from "@wallet-ui/react";
 import type { ReactNode } from "react";
 
 import { CLUSTER, RPC_URL } from "@/lib/env";
 
-const cluster =
-  CLUSTER === "localnet"
-    ? createSolanaLocalnet({ url: RPC_URL })
-    : createSolanaDevnet({ url: RPC_URL });
+const cluster = CLUSTER === "localnet" ? createSolanaLocalnet({ url: RPC_URL }) : createSolanaDevnet({ url: RPC_URL });
 
 const config = createWalletUiConfig({ clusters: [cluster] });
 

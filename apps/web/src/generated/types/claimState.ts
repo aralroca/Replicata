@@ -34,9 +34,6 @@ export function getClaimStateDecoder(): FixedSizeDecoder<ClaimState> {
   return getEnumDecoder(ClaimState);
 }
 
-export function getClaimStateCodec(): FixedSizeCodec<
-  ClaimStateArgs,
-  ClaimState
-> {
+export function getClaimStateCodec(): FixedSizeCodec<ClaimStateArgs, ClaimState> {
   return combineCodec(getClaimStateEncoder(), getClaimStateDecoder());
 }

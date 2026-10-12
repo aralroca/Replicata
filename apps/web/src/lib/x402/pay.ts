@@ -5,11 +5,11 @@ import { wrapFetchWithPayment } from "@x402/fetch";
 import { COORDINATOR_URL } from "@/lib/env";
 import type { Faucets, UiError } from "@/lib/errors";
 import { paymentError, thrownPaymentError, type PaidResponse } from "@/lib/x402/errors";
-import { createPaymentClient } from "@/lib/x402/scheme";
+import { createPaymentClient, type PaymentTarget } from "@/lib/x402/scheme";
 
 export type ResultFile = { blob: Blob; filename: string; resultHash: string | null };
 
-export type PaymentSetup = { signer: TransactionSigner; network: string; rpcUrl: string; faucets: Faucets };
+export type PaymentSetup = PaymentTarget & { signer: TransactionSigner; faucets: Faucets };
 
 export type PaymentOutcome = { file: ResultFile; error?: never } | { file?: never; error: UiError };
 
@@ -24,19 +24,20 @@ export function filenameFrom(disposition: string | null, fallback: string): stri
   return /filename="?([^";]+)"?/.exec(disposition ?? "")?.[1] ?? fallback;
 }
 
-async function toOutcome(response: Response, id: string, faucets: Faucets): Promise<PaymentOutcome> {
-  const error = response.ok ? null : paymentError(await readPaidResponse(response), faucets);
+async function resultFile(response: Response, id: string): Promise<ResultFile> {
   const filename = filenameFrom(response.headers.get("content-disposition"), `${id}.tar.gz`);
 
-  if (error) {
-    return { error };
-  }
+  return { blob: await response.blob(), filename, resultHash: response.headers.get("x-result-hash") };
+}
 
-  return { file: { blob: await response.blob(), filename, resultHash: response.headers.get("x-result-hash") } };
+async function toOutcome(response: Response, id: string, faucets: Faucets): Promise<PaymentOutcome> {
+  const error = response.ok ? null : paymentError(await readPaidResponse(response), faucets);
+
+  return error ? { error } : { file: await resultFile(response, id) };
 }
 
 export async function buyResult(id: string, setup: PaymentSetup): Promise<PaymentOutcome> {
-  const client = createPaymentClient(setup.signer, setup.network, setup.rpcUrl);
+  const client = createPaymentClient(setup.signer, setup);
   const paidFetch = wrapFetchWithPayment(fetch, client);
 
   return paidFetch(`${COORDINATOR_URL}/v1/experiments/${id}/result`)

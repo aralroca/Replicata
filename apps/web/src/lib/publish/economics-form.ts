@@ -56,7 +56,11 @@ const RULES: { field: keyof EconomicsForm; message: string; ok: (e: Economics) =
     message: "Commit and reveal windows must be at least 1 minute",
     ok: (e) => e.commitSecs > 0 && e.revealSecs > 0,
   },
-  { field: "accessPrice", message: "Access price must be greater than zero", ok: (e) => e.accessPrice > 0n },
+  {
+    field: "accessPrice",
+    message: "Access price must be greater than zero",
+    ok: (e) => e.accessPrice > 0n,
+  },
   {
     field: "authorSharePct",
     message: "Author share must be between 0% and 100%",
@@ -67,5 +71,8 @@ const RULES: { field: keyof EconomicsForm; message: string; ok: (e: Economics) =
 export function economicsIssues(form: EconomicsForm, decimals = 6): SpecIssue[] {
   const economics = toEconomics(form, decimals);
 
-  return RULES.filter((rule) => !rule.ok(economics)).map(({ field, message }) => ({ field, message }));
+  return RULES.filter((rule) => !rule.ok(economics)).map(({ field, message }) => ({
+    field,
+    message,
+  }));
 }

@@ -18,7 +18,12 @@ function textWidth(text: string): number {
 }
 
 function escapeXml(text: string): string {
-  const entities: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
+  const entities: Record<string, string> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+  };
 
   return text.replace(/[&<>"]/g, (char) => entities[char]);
 }

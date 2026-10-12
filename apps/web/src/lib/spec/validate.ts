@@ -11,8 +11,7 @@ export type SpecIssue = { field: string; message: string };
 
 type Rule<T> = { field: string; message: (value: T) => string; ok: (value: T) => boolean };
 
-const inRange = (value: number, min: number, max: number) =>
-  Number.isInteger(value) && value >= min && value <= max;
+const inRange = (value: number, min: number, max: number) => Number.isInteger(value) && value >= min && value <= max;
 
 export function isSafeRelativePath(path: string): boolean {
   const segmentsOk = path.split("/").every((seg) => seg !== "" && seg !== "." && seg !== "..");

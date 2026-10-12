@@ -26,6 +26,8 @@ export default defineConfig([
   houseStyle,
   globalIgnores([
     ".next/**",
+    ".next-e2e/**",
+    ".vitest/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
