@@ -1,0 +1,20 @@
+{
+  "name": "replicata",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "gen": "node codama.mjs",
+    "gen:check": "node codama.mjs && git diff --exit-code -- apps/web/src/generated && test -z \"$(git status --porcelain -- apps/web/src/generated)\"",
+    "web:dev": "pnpm -C apps/web dev",
+    "web:build": "pnpm -C apps/web build",
+    "web:lint": "pnpm -C apps/web lint",
+    "web:test": "pnpm -C apps/web test",
+    "web:e2e": "pnpm -C apps/web test:e2e"
+  },
+  "devDependencies": {
+    "@codama/nodes-from-anchor": "1.5.6",
+    "@codama/renderers-js": "2.5.0",
+    "codama": "1.11.0"
+  }
+}

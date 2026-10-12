@@ -1,0 +1,21 @@
+[package]
+name = "replicata-facilitator"
+version = "0.1.0"
+description = "Self-hosted x402 facilitator (v2 exact, Solana) for localnet end-to-end tests"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+axum = "0.8.9"
+bs58 = "0.5.1"
+serde_json.workspace = true
+solana-client = "3.1.14"
+solana-keypair = "3.1.2"
+tokio = { version = "1.53.2", features = ["full"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+x402-chain-solana = { version = "2.0.2", features = ["facilitator"] }
+x402-facilitator-local = "2.0.2"
+x402-types = "2.0.2"
