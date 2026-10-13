@@ -1,0 +1,17 @@
+# Vercel only builds apps/web (the pnpm workspace root is needed for the lockfile).
+# Patterns are anchored to the repo root so apps/web/src/generated/programs is kept.
+/target
+/.localnet
+/.claude
+/programs
+/crates
+/tests
+/e2e
+/examples
+/scripts
+/docs
+/idl
+**/node_modules
+/apps/web/.next*
+/apps/web/test-results
+/apps/web/playwright-report

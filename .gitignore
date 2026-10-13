@@ -8,3 +8,6 @@ test-ledger
 .surfpool
 .claude/
 .localnet/
+.vercel
+.env*
+!.env.example

@@ -26,7 +26,9 @@ function Nav() {
 
 function Brand() {
   return (
-    <Link href="/" className="text-lg font-bold text-foreground no-underline">
+    <Link href="/" className="flex items-center gap-2 text-lg font-bold text-foreground no-underline">
+      {/* eslint-disable-next-line @next/next/no-img-element -- static SVG logo */}
+      <img src="/mark.svg" alt="" width={28} height={28} />
       Replicata <span className="text-xs font-normal text-muted">{CLUSTER}</span>
     </Link>
   );
