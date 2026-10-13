@@ -1,0 +1,5 @@
+apps/web/src/generated/** linguist-generated=true
+idl/** linguist-generated=true
+vectors/** linguist-generated=true
+*.lock linguist-generated=true
+pnpm-lock.yaml linguist-generated=true

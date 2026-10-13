@@ -7,7 +7,7 @@
 
 ### Results you can verify. Replication that pays.
 
-**Escrowed USDC bounties for reproducing computational experiments, settled by commit-reveal majority on Solana,<br>with verified results sold to humans and AI agents over x402.**
+**Escrowed USDC bounties for reproducing computational experiments, settled by commit-reveal majority on Solana, with verified results sold to humans and AI agents over x402.**
 
 [![CI](https://github.com/aralroca/Replicata/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/aralroca/Replicata/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
