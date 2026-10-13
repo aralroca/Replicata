@@ -40,8 +40,10 @@ function CardStats({ experiment }: { experiment: ExperimentView }) {
 function CardTitle({ experiment }: { experiment: ExperimentView }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-2">
-      <h3 className="text-base font-semibold">
-        <Link href={`/e/${experiment.id}`}>{experimentTitle(experiment)}</Link>
+      <h3 className="text-lg">
+        <Link href={`/e/${experiment.id}`} className="no-underline hover:underline">
+          {experimentTitle(experiment)}
+        </Link>
       </h3>
       <StatusPills experiment={experiment} />
     </div>
@@ -50,7 +52,7 @@ function CardTitle({ experiment }: { experiment: ExperimentView }) {
 
 export function ExperimentCard({ experiment }: { experiment: ExperimentView }) {
   return (
-    <li className="card" data-testid="experiment-card">
+    <li className="card card-hover" data-testid="experiment-card">
       <CardTitle experiment={experiment} />
       <CardStats experiment={experiment} />
     </li>

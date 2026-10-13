@@ -18,7 +18,7 @@ function BuyButton({ experiment, pending, disabled, onClick }: BuyButtonProps) {
   const label = pending ? "Paying…" : `Get verified result (${formatPrice(experiment.access_price)})`;
 
   return (
-    <button type="button" className="btn btn-primary w-fit" disabled={disabled} onClick={onClick}>
+    <button type="button" className="btn btn-accent w-fit" disabled={disabled} onClick={onClick}>
       {label}
     </button>
   );

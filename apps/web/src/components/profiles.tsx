@@ -51,7 +51,7 @@ function WorkerStats({ worker }: { worker: WorkerView }) {
 function ProfileHeader({ kind, pubkey }: { kind: string; pubkey: string }) {
   return (
     <header>
-      <h1 className="text-2xl font-bold">{kind}</h1>
+      <h1 className="text-4xl sm:text-5xl">{kind}</h1>
       <p className="mt-1 text-sm">
         <ExplorerLink value={pubkey} />
       </p>

@@ -19,7 +19,7 @@ function CodeSection({ id, title, code }: (typeof SECTIONS)[number]) {
       <h2 id={id} className="font-semibold">
         {title}
       </h2>
-      <pre className="mono overflow-x-auto rounded-lg bg-background p-3 text-xs" tabIndex={0}>
+      <pre className="mono overflow-x-auto rounded-xl border border-border bg-subtle p-4 text-xs" tabIndex={0}>
         <code>{code.replaceAll("{{C}}", COORDINATOR_URL)}</code>
       </pre>
     </section>
@@ -29,7 +29,7 @@ function CodeSection({ id, title, code }: (typeof SECTIONS)[number]) {
 function Intro() {
   return (
     <header className="grid gap-2">
-      <h1 className="text-2xl font-bold">Agents API</h1>
+      <h1 className="text-4xl sm:text-5xl">Agents API</h1>
       <p className="text-muted">
         Everything in the UI is plain HTTP + x402 (USDC on Solana). No accounts, no API keys. Full machine-readable
         description: <a href={`${COORDINATOR_URL}/openapi.json`}>{COORDINATOR_URL}/openapi.json</a>.

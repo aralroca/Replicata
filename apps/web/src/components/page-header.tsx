@@ -5,8 +5,8 @@ export function PageShell({ title, lead, children }: { title: string; lead: stri
   return (
     <div className="grid gap-6">
       <header>
-        <h1 className="text-2xl font-bold">{title}</h1>
-        <p className="mt-2 text-muted">{lead}</p>
+        <h1 className="text-4xl sm:text-5xl">{title}</h1>
+        <p className="mt-3 max-w-2xl text-lg text-muted">{lead}</p>
       </header>
       {children}
     </div>

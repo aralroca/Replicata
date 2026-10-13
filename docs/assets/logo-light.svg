@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" role="img" aria-label="Replicata">
   <defs>
     <linearGradient id="g" x1="14" y1="74" x2="66" y2="22" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#9945FF"/>
-      <stop offset="0.55" stop-color="#5D8BF4"/>
-      <stop offset="1" stop-color="#14F195"/>
+      <stop offset="0" stop-color="#1D4ED8"/>
+      <stop offset="0.55" stop-color="#2567FF"/>
+      <stop offset="1" stop-color="#7DB2FF"/>
     </linearGradient>
   </defs>
   <rect x="26" y="12" width="40" height="40" rx="10" fill="url(#g)" opacity="0.28"/>
   <rect x="20" y="20" width="40" height="40" rx="10" fill="url(#g)" opacity="0.55"/>
   <rect x="14" y="28" width="40" height="40" rx="10" fill="url(#g)"/>
   <path d="M24.5 48.5l7 7 13-14" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="86" y="55" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="40" font-weight="700" letter-spacing="-1" fill="#0B0F14">Replicata</text>
+  <text x="86" y="55" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="40" font-weight="600" letter-spacing="-1.5" fill="#0B0F14">Replicata</text>
 </svg>

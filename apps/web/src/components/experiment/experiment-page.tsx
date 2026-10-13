@@ -13,7 +13,7 @@ import type { ExperimentView } from "@/lib/types";
 function Title({ experiment }: { experiment: ExperimentView }) {
   return (
     <header className="grid gap-2">
-      <h1 className="text-2xl font-bold">{experimentTitle(experiment)}</h1>
+      <h1 className="text-4xl sm:text-5xl">{experimentTitle(experiment)}</h1>
       <StatusPills experiment={experiment} />
       {experiment.spec?.description && <p className="text-muted">{experiment.spec.description}</p>}
     </header>

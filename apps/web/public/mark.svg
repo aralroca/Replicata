@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Replicata">
   <defs>
     <linearGradient id="g" x1="6" y1="58" x2="58" y2="6" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#9945FF"/>
-      <stop offset="0.55" stop-color="#5D8BF4"/>
-      <stop offset="1" stop-color="#14F195"/>
+      <stop offset="0" stop-color="#1D4ED8"/>
+      <stop offset="0.55" stop-color="#2567FF"/>
+      <stop offset="1" stop-color="#7DB2FF"/>
     </linearGradient>
   </defs>
   <!-- three replications of the same result, the front one verified -->

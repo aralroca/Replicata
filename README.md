@@ -22,7 +22,7 @@
 
 [**Live demo**](https://replicata.vercel.app) · [Architecture](docs/ARCHITECTURE.md) · [Agents API](docs/API.md) · [Demo script](docs/DEMO-SCRIPT.md) · [Contributing](CONTRIBUTING.md)
 
-<img alt="An experiment replicated 3/3 by independent workers, with its verified result for sale" src="docs/assets/experiment.jpg" width="880">
+<img alt="Replicata home: results you can verify, replication that pays" src="docs/assets/home.jpg" width="880">
 
 </div>
 
@@ -80,9 +80,13 @@ sequenceDiagram
 
 ## Screenshots
 
-| Feed | Publish wizard |
+| Replicated experiment | How it works & feed |
 |---|---|
-| <img src="docs/assets/feed.jpg" alt="Experiment feed" width="440"> | <img src="docs/assets/publish.jpg" alt="Three-step publish wizard" width="440"> |
+| <img src="docs/assets/experiment.jpg" alt="An experiment replicated 3/3 with its verified result for sale over x402" width="440"> | <img src="docs/assets/feed.jpg" alt="How it works and the experiment feed" width="440"> |
+
+| Publish wizard |
+|---|
+| <img src="docs/assets/publish.jpg" alt="Three-step publish wizard" width="880"> |
 
 ## Architecture
 

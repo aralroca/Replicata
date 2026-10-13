@@ -1,16 +1,19 @@
 @import "tailwindcss";
 @import "@wallet-ui/tailwind/index.css";
 
+/* Light, editorial theme: near-white canvas, ink text, one electric-blue accent, pill controls. */
 :root {
-  --background: #0b0f14;
-  --foreground: #e6edf3;
-  --muted: #9aa7b4;
-  --card: #121821;
-  --border: #263241;
-  --accent: #58a6ff;
-  --success: #3fb950;
-  --warning: #d29922;
-  --danger: #f85149;
+  --background: #fefefe;
+  --foreground: #0a0a0a;
+  --muted: #5d5d5d;
+  --card: #ffffff;
+  --subtle: #f6f7fb;
+  --border: #ededed;
+  --accent: #2567ff;
+  --accent-strong: #1d4ed8; /* small text on tinted backgrounds (AA contrast) */
+  --success: #0f7b3f;
+  --warning: #9a5b00;
+  --danger: #c62828;
 }
 
 @theme inline {
@@ -18,12 +21,14 @@
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-card: var(--card);
+  --color-subtle: var(--subtle);
   --color-border: var(--border);
   --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -33,8 +38,14 @@
     font-family: var(--font-sans);
   }
 
+  h1,
+  h2,
+  h3 {
+    @apply font-medium tracking-[-0.025em];
+  }
+
   a {
-    @apply text-accent underline underline-offset-2 hover:no-underline;
+    @apply text-accent underline decoration-accent/30 underline-offset-[3px] hover:decoration-accent;
   }
 
   :focus-visible {
@@ -44,26 +55,57 @@
 
 @layer components {
   .card {
-    @apply rounded-xl border border-border bg-card p-5;
+    @apply rounded-2xl border border-border bg-card p-6 shadow-[0_1px_2px_rgba(10,10,10,0.04)];
+  }
+
+  .card-hover {
+    @apply transition hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(37,103,255,0.08)];
+  }
+
+  .eyebrow {
+    @apply inline-flex items-center gap-2 rounded-full border border-border bg-subtle px-3 py-1 text-xs font-medium text-muted;
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold no-underline transition disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-full px-6 text-sm font-medium tracking-[-0.02em] no-underline transition hover:no-underline disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-primary {
-    @apply bg-accent text-[#0b0f14] hover:brightness-110;
+    @apply bg-foreground text-white hover:bg-[#262626];
+  }
+
+  .btn-accent {
+    @apply bg-accent text-white hover:brightness-110;
   }
 
   .btn-ghost {
-    @apply border border-border text-foreground hover:bg-white/5;
+    @apply border border-[rgba(33,34,38,0.06)] bg-[rgba(183,191,217,0.1)] text-foreground hover:bg-[rgba(183,191,217,0.2)];
   }
 
   .input {
-    @apply w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent;
+    @apply w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm text-foreground placeholder:text-[#9a9a9a] focus:border-accent focus:outline-none;
   }
 
   .mono {
     font-family: var(--font-mono);
   }
+}
+
+/* wallet-ui's trigger button, restyled as the primary pill. Unlayered on purpose: the
+   library's own styles are unlayered too, so a layered rule would lose. */
+header [data-wu="base-button"][data-part="trigger"] {
+  height: 2.5rem;
+  border: 0;
+  border-radius: 9999px;
+  padding: 0 1.25rem;
+  background: var(--foreground);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  box-shadow: none;
+}
+
+header [data-wu="base-button"][data-part="trigger"]:hover {
+  background: #262626;
 }

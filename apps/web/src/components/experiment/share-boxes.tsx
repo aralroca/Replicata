@@ -15,7 +15,11 @@ const REPLICATE_HINT =
 
 export function Code({ code, label }: { code: string; label: string }) {
   return (
-    <pre className="mono overflow-x-auto rounded-lg bg-background p-3 text-xs" tabIndex={0} aria-label={label}>
+    <pre
+      className="mono overflow-x-auto rounded-xl border border-border bg-subtle p-4 text-xs"
+      tabIndex={0}
+      aria-label={label}
+    >
       <code>{code}</code>
     </pre>
   );
