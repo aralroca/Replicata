@@ -79,6 +79,7 @@ rust:lint:
   extends: .rust
   stage: verify
   script:
+    - rustup component add rustfmt clippy
     - anchor build
     - diff -u idl/replicata.json target/idl/replicata.json
     - cargo fmt --all -- --check

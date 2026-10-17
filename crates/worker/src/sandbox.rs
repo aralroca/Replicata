@@ -35,10 +35,11 @@ fn socket_candidates() -> Vec<PathBuf> {
         .collect()
 }
 
-/// Connects to `DOCKER_HOST` if set, otherwise to the first existing well-known socket.
+/// Connects to `DOCKER_HOST` if set (unix:// or tcp://, e.g. a CI Docker-in-Docker service),
+/// otherwise to the first existing well-known socket.
 pub fn docker() -> anyhow::Result<Docker> {
     if std::env::var_os("DOCKER_HOST").is_some() {
-        return Docker::connect_with_local_defaults().context("cannot reach Docker at DOCKER_HOST");
+        return Docker::connect_with_defaults().context("cannot reach Docker at DOCKER_HOST");
     }
     let socket = socket_candidates()
         .into_iter()
