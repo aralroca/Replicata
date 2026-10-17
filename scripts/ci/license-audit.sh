@@ -34,14 +34,19 @@ js_licenses() {
     jq '[to_entries[] | .key as $license | .value[] | {name, version: (.versions[0]), license: $license}]'
 }
 
+# One SPDX term per line, parentheses trimmed (awk: same behaviour with GNU and BSD tools).
+split() {
+  awk -v sep="$1" '{ n = split($0, parts, sep); for (i = 1; i <= n; i++) { gsub(/^[( ]+|[) ]+$/, "", parts[i]); print parts[i] } }'
+}
+
 # An expression passes when at least one OR-branch is made only of allowed ids.
 acceptable() {
   local branch
 
   while read -r branch; do
     [[ -n $branch ]] || continue
-    tr '&' '\n' <<<"${branch// AND /&}" | sed 's/^[( ]*//; s/[) ]*$//' | grep -Evq "$ALLOWED" || return 0
-  done < <(sed 's#/#\n#g; s/ OR /\n/g' <<<"$1")
+    split ' AND ' <<<"$branch" | grep -Evq "$ALLOWED" || return 0
+  done < <(split ' OR |/' <<<"$1")
 
   return 1
 }

@@ -135,12 +135,15 @@ web:test:
 
 sast:
   stage: secure
+  needs: []
 
 secret_detection:
   stage: secure
+  needs: []
 
 dependency_scanning:
   stage: secure
+  needs: []
 
 container_scanning:
   stage: secure

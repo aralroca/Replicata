@@ -3,6 +3,8 @@
 # and anchor-cli, and exposes them on GITHUB_PATH.
 set -euo pipefail
 
+# `cargo install` puts anchor in $CARGO_HOME/bin (GitLab caches CARGO_HOME inside the project).
+export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 sh -c "$(curl -sSfL "https://release.anza.xyz/${AGAVE_VERSION:-v4.1.2}/install")"
 SOLANA_BIN="$HOME/.local/share/solana/install/active_release/bin"
 echo "$SOLANA_BIN" >>"${GITHUB_PATH:-/dev/null}"
