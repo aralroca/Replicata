@@ -17,7 +17,7 @@ Copy-paste material for the Encode Club project form.
 | Program (devnet) | https://explorer.solana.com/address/G9Ssnp8rjg7gpi4Sm3EZLoC73z9pdXd9etJzUDH39Wj9?cluster=devnet |
 | Worker CLI | `curl -sSf https://replicata.vercel.app/install.sh \| sh` (release v0.1.0) |
 | Agents API | https://github.com/aralroca/Replicata/blob/main/docs/API.md |
-| Demo video | _(add the YouTube link)_ |
+| Demo video | https://youtu.be/4vxmJXJwinE |
 
 ## Short description
 

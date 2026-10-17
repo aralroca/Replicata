@@ -12,6 +12,7 @@
 [![CI](https://github.com/aralroca/Replicata/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/aralroca/Replicata/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Live demo](https://img.shields.io/badge/demo-replicata.vercel.app-000?logo=vercel)](https://replicata.vercel.app)
+[![Demo video](https://img.shields.io/badge/video-2%20min%20demo-FF0000?logo=youtube&logoColor=white)](https://youtu.be/4vxmJXJwinE)
 [![Program on devnet](https://img.shields.io/badge/Solana-devnet-9945FF?logo=solana&logoColor=white)](https://explorer.solana.com/address/G9Ssnp8rjg7gpi4Sm3EZLoC73z9pdXd9etJzUDH39Wj9?cluster=devnet)
 [![x402](https://img.shields.io/badge/payments-x402%20v2-14F195)](https://www.x402.org)
 <br>
@@ -20,9 +21,11 @@
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs)](apps/web)
 [![Encode × Solana Hackathon 2026](https://img.shields.io/badge/Encode%20×%20Solana-Hackathon%202026-ff6b35)](https://www.encodeclub.com/programmes/solana-hackathon-2026)
 
-[**Live demo**](https://replicata.vercel.app) · [Architecture](docs/ARCHITECTURE.md) · [Agents API](docs/API.md) · [Demo script](docs/DEMO-SCRIPT.md) · [Contributing](CONTRIBUTING.md)
+[**Live demo**](https://replicata.vercel.app) · [**▶ Demo video**](https://youtu.be/4vxmJXJwinE) · [Architecture](docs/ARCHITECTURE.md) · [Agents API](docs/API.md) · [Demo script](docs/DEMO-SCRIPT.md) · [Contributing](CONTRIBUTING.md)
 
-<img alt="Replicata home: results you can verify, replication that pays" src="docs/assets/home.jpg" width="880">
+<a href="https://youtu.be/4vxmJXJwinE"><img alt="Watch the 2-minute Replicata demo on YouTube" src="docs/assets/demo-video.png" width="880"></a>
+
+<sub>▶ <a href="https://youtu.be/4vxmJXJwinE">Watch the 2-minute demo</a>: publish, three workers replicate, an AI agent pays over x402, royalties, and a dishonest worker slashed.</sub>
 
 </div>
 
@@ -79,6 +82,8 @@ sequenceDiagram
 | **Agents** | `POST /v1/experiments` paid over x402 returns a transaction the agent signs | Agents publish and consume science without accounts |
 
 ## Screenshots
+
+<img src="docs/assets/home.jpg" alt="Replicata home: results you can verify, replication that pays" width="880">
 
 | Replicated experiment | How it works & feed |
 |---|---|
