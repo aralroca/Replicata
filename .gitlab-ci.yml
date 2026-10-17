@@ -112,6 +112,16 @@ e2e:localnet:
   extends: [.rust, .docker]
   stage: verify
   needs: []
+  services:
+    - name: docker:27-dind
+      alias: docker
+    - name: postgres:17-alpine
+      alias: postgres
+  variables:
+    POSTGRES_USER: replicata
+    POSTGRES_PASSWORD: replicata
+    POSTGRES_DB: replicata
+    LOCALNET_DATABASE_URL: postgres://replicata:replicata@postgres:5432/replicata
   script:
     - anchor build
     - scripts/e2e-local.sh 2

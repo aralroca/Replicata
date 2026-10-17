@@ -110,13 +110,25 @@ async fn wait(docker: &Docker, id: &str, timeout: Duration) -> (i64, bool) {
     }
 }
 
+/// `nobody:nogroup`, used when the worker itself runs as root.
+#[cfg(unix)]
+const NOBODY: (u32, u32) = (65534, 65534);
+
 /// Never run as root: use the owner of the output directory, so the experiment can write its
-/// results (with every capability dropped, root could not write into a user-owned mount).
+/// results (with every capability dropped, root could not write into a user-owned mount). When the
+/// worker runs as root (servers, CI) that owner is root, so the directory goes to `nobody` instead;
+/// if handing it over fails the experiment still runs as `nobody` and simply cannot write.
 #[cfg(unix)]
 fn run_as(out: &Path) -> Option<String> {
     use std::os::unix::fs::MetadataExt;
 
-    std::fs::metadata(out).ok().map(|m| format!("{}:{}", m.uid(), m.gid()))
+    let meta = std::fs::metadata(out).ok()?;
+    if meta.uid() != 0 {
+        return Some(format!("{}:{}", meta.uid(), meta.gid()));
+    }
+    let _ = std::os::unix::fs::chown(out, Some(NOBODY.0), Some(NOBODY.1));
+
+    Some(format!("{}:{}", NOBODY.0, NOBODY.1))
 }
 
 #[cfg(not(unix))]
