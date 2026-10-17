@@ -1,0 +1,14 @@
+# Autonomy follows blast radius. Off-chain code merges itself when the pipeline (tests, security
+# scans and the devnet canary) is green. The on-chain escrow program holds people's money: the
+# Autopilot still writes, tests and audits the change, but a human code owner must approve it.
+# (Enforced by "Require approval from code owners" on the protected default branch.)
+
+[On-chain escrow program][1]
+/programs/ @aralroca
+/idl/ @aralroca
+/apps/web/src/generated/ @aralroca
+
+[Delivery automation][1]
+/.gitlab-ci.yml @aralroca
+/.gitlab/ @aralroca
+/scripts/ci/ @aralroca

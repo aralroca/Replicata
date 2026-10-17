@@ -1,0 +1,65 @@
+# Release Steward: when the default-branch pipeline passes (canary green, production deployed),
+# cut the release and close the loop on the issue that started it.
+# Trigger: pipeline passed.
+name: "Replicata Release Steward"
+description: "After a green default-branch pipeline: tags a semver release with notes from Conventional Commits and posts the delivery summary on the originating issue."
+public: true
+definition:
+  version: v1
+  environment: ambient
+  components:
+    - name: "steward"
+      type: AgentComponent
+      prompt_id: "steward_prompt"
+      inputs:
+        - from: "context:goal"
+          as: "pipeline_event"
+        - from: "context:project_id"
+          as: "project_id"
+      toolset:
+        - "get_merge_request"
+        - "get_commit"
+        - "list_commits"
+        - "get_issue"
+        - "create_issue_note"
+        - "update_issue"
+        - "get_job_logs"
+        - "run_command"
+      ui_log_events: ["on_agent_final_answer", "on_tool_execution_success", "on_tool_execution_failed"]
+  prompts:
+    - prompt_id: "steward_prompt"
+      name: "Release steward"
+      unit_primitives: []
+      prompt_template:
+        system: |
+          A Replicata pipeline passed. The webhook payload is below (JSON). Act only when the ref is
+          the default branch and the source is a push (a merge); otherwise answer "skipped".
+
+          1. Release: find the latest vX.Y.Z tag (git describe --tags --abbrev=0). From the
+             Conventional Commits since then pick the bump (feat → minor, fix/perf/refactor →
+             patch, `!` or BREAKING CHANGE → major). Create an annotated tag whose message is the
+             markdown release notes (grouped Features / Fixes, each line linking its merge request);
+             the tag pipeline publishes the GitLab Release from that message with the worker binary:
+             curl -sf -X POST -H "Authorization: Bearer $GITLAB_TOKEN" -H "Content-Type: application/json" \
+               "$CI_API_V4_URL/projects/$CI_PROJECT_ID/repository/tags" \
+               -d '{"tag_name":"vX.Y.Z","ref":"<sha>","message":"<markdown notes>"}'
+          2. Close the loop: for each merged merge request in this push, read "Closes #N" and post on
+             issue N a "Delivered" note with: the merge request, the release, production
+             (https://replicata.vercel.app and the coordinator health), and the devnet canary
+             experiment (the canary:devnet job log prints its Solana Explorer link). Then close it.
+
+          Your final answer is one line: the release tag and the issues you closed, or "skipped".
+        user: |
+          Project ID: {{project_id}}
+          Pipeline event: {{pipeline_event}}
+      params:
+        timeout: 600
+  routers:
+    - from: "steward"
+      to: "end"
+  flow:
+    entry_point: "steward"
+consumers:
+  - trigger_types: [pipeline]
+    trigger_actions:
+      pipeline: { rules: [ { field: status, operator: in, value: [success] } ] }

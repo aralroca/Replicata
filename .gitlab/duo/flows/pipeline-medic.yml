@@ -1,0 +1,81 @@
+# Pipeline Medic: when a pipeline fails, read the failing jobs and act on the cause.
+# - On an autopilot merge request: fix the branch and push again (the auto-merge stays armed).
+# - On the default branch or a scheduled canary (production health): open an incident with the
+#   diagnosis and push a revert merge request so main goes back to the last green state.
+# Trigger: pipeline failed.
+name: "Replicata Pipeline Medic"
+description: "Diagnoses failed Replicata pipelines: repairs autopilot merge requests, and turns default-branch or canary failures into an incident plus a revert."
+public: true
+definition:
+  version: v1
+  environment: ambient
+  components:
+    - name: "medic"
+      type: AgentComponent
+      prompt_id: "medic_prompt"
+      inputs:
+        - from: "context:goal"
+          as: "pipeline_event"
+        - from: "context:project_id"
+          as: "project_id"
+      toolset:
+        - "get_pipeline_failing_jobs"
+        - "get_job_logs"
+        - "get_merge_request"
+        - "list_all_merge_request_notes"
+        - "read_file"
+        - "read_files"
+        - "list_dir"
+        - "find_files"
+        - "grep"
+        - "edit_file"
+        - "run_command"
+        - "create_merge_request_note"
+        - "create_issue"
+        - "create_issue_note"
+        - "list_issues"
+      ui_log_events: ["on_agent_final_answer", "on_tool_execution_success", "on_tool_execution_failed"]
+  prompts:
+    - prompt_id: "medic_prompt"
+      name: "Pipeline medic"
+      unit_primitives: []
+      prompt_template:
+        system: |
+          A Replicata pipeline failed. The pipeline webhook payload is below (JSON). Use
+          get_pipeline_failing_jobs and get_job_logs to find the root cause; do not guess.
+
+          Case A - the ref is an `autopilot/...` branch with an open merge request:
+          - If you already posted 2 "Pipeline medic" notes on that merge request, stop and post a
+            note asking for a human instead (no infinite loops).
+          - Otherwise fix the cause on that branch (checkout, smallest fix, Conventional Commit),
+            `git push origin HEAD`, and post a "Pipeline medic" note on the merge request with the
+            failing job, the root cause and the fix. The auto-merge stays armed.
+          - Flaky infrastructure (runner lost, registry timeout, devnet RPC 429): retry the job with
+            curl -sf -X POST -H "Authorization: Bearer $GITLAB_TOKEN" "$CI_API_V4_URL/projects/$CI_PROJECT_ID/jobs/<job_id>/retry"
+            and say so in the note instead of changing code.
+
+          Case B - the ref is the default branch, or the source is "schedule" (the hourly devnet
+          canary that monitors production):
+          - Open an issue titled "Incident: <job> failing on <ref>" with labels incident and
+            autopilot, containing the failing job, log excerpt, root cause and blast radius
+            (production stays on the last image that passed the canary because deploys are gated).
+          - If a commit on the default branch caused it, push a branch `autopilot/revert-<sha>` with
+            `git revert --no-edit <sha>` and open the merge request with push options
+            (-o merge_request.create -o merge_request.merge_when_pipeline_succeeds
+             -o merge_request.title="Revert <sha>: <reason>"), then link it in the incident.
+
+          Your final answer is one line: what you did.
+        user: |
+          Project ID: {{project_id}}
+          Pipeline event: {{pipeline_event}}
+      params:
+        timeout: 900
+  routers:
+    - from: "medic"
+      to: "end"
+  flow:
+    entry_point: "medic"
+consumers:
+  - trigger_types: [pipeline]
+    trigger_actions:
+      pipeline: { rules: [ { field: status, operator: in, value: [failed] } ] }
