@@ -1,6 +1,6 @@
 # Replicata on GitLab: the whole post-code lifecycle in one pipeline.
 #
-#   verify  → secure → package → staging → canary (real replication on devnet) → production
+#   verify  → package → secure → staging → canary (real replication on devnet) → production
 #   release (tags) · monitor (scheduled canary) · govern (license + policy audit)
 #
 # GitLab Duo agents (see .gitlab/duo/) open the merge requests, read this pipeline, fix what
@@ -14,7 +14,7 @@ workflow:
     - if: $CI_COMMIT_BRANCH
     - if: $CI_COMMIT_TAG
 
-stages: [verify, secure, package, staging, canary, production, release, monitor, govern]
+stages: [verify, package, secure, staging, canary, production, release, monitor, govern]
 
 include:
   - template: Jobs/SAST.gitlab-ci.yml
