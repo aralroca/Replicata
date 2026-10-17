@@ -43,6 +43,12 @@ pub async fn health() -> &'static str {
     "ok"
 }
 
+/// The build that is serving (`REPLICATA_VERSION`, the commit SHA baked into the image), so a
+/// deploy can tell the new instance from the old one.
+pub async fn version() -> String {
+    std::env::var("REPLICATA_VERSION").unwrap_or_else(|_| "dev".into())
+}
+
 pub async fn post_spec(State(state): State<AppState>, body: Bytes) -> ApiResult<(StatusCode, Json<Value>)> {
     let spec = JobSpec::parse(&body).map_err(|e| ApiError::bad_request(e.to_string()))?;
     let spec_hash = to_hex(&spec.spec_hash());

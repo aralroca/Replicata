@@ -116,24 +116,25 @@ const NOBODY: (u32, u32) = (65534, 65534);
 
 /// Never run as root: use the owner of the output directory, so the experiment can write its
 /// results (with every capability dropped, root could not write into a user-owned mount). When the
-/// worker runs as root (servers, CI) that owner is root, so the directory goes to `nobody` instead;
-/// if handing it over fails the experiment still runs as `nobody` and simply cannot write.
+/// worker runs as root (servers, CI) that owner is root, so the directory goes to `nobody` instead.
+/// Any failure aborts the run before anything is committed: an experiment that cannot write would
+/// produce the hash of an empty output and cost the worker its bond.
 #[cfg(unix)]
-fn run_as(out: &Path) -> Option<String> {
+fn run_as(out: &Path) -> anyhow::Result<Option<String>> {
     use std::os::unix::fs::MetadataExt;
 
-    let meta = std::fs::metadata(out).ok()?;
+    let meta = std::fs::metadata(out).context("reading the output directory owner")?;
     if meta.uid() != 0 {
-        return Some(format!("{}:{}", meta.uid(), meta.gid()));
+        return Ok(Some(format!("{}:{}", meta.uid(), meta.gid())));
     }
-    let _ = std::os::unix::fs::chown(out, Some(NOBODY.0), Some(NOBODY.1));
+    std::os::unix::fs::chown(out, Some(NOBODY.0), Some(NOBODY.1)).context("handing /out to nobody")?;
 
-    Some(format!("{}:{}", NOBODY.0, NOBODY.1))
+    Ok(Some(format!("{}:{}", NOBODY.0, NOBODY.1)))
 }
 
 #[cfg(not(unix))]
-fn run_as(_out: &Path) -> Option<String> {
-    None
+fn run_as(_out: &Path) -> anyhow::Result<Option<String>> {
+    Ok(None)
 }
 
 /// Runs the experiment; `out` must be an empty, writable directory.
@@ -146,7 +147,7 @@ pub async fn run(docker: &Docker, spec: &JobSpec, inputs: &Path, out: &Path) -> 
         env: Some(container_env(spec)),
         network_disabled: Some(true),
         working_dir: Some("/out".into()),
-        user: run_as(out),
+        user: run_as(out)?,
         host_config: Some(host_config(spec, inputs, out)),
         ..Default::default()
     };
@@ -160,4 +161,18 @@ pub async fn run(docker: &Docker, spec: &JobSpec, inputs: &Path, out: &Path) -> 
     let _ = docker.remove_container(&created.id, Some(remove)).await;
 
     Ok(RunOutcome { exit_code, timed_out, logs })
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn run_as_uses_the_output_owner_and_never_falls_back_to_the_image_user() {
+        let dir = tempfile::tempdir().unwrap();
+        let user = run_as(dir.path()).unwrap().unwrap();
+
+        assert_ne!(user, "0:0", "never root");
+        assert!(run_as(&dir.path().join("missing")).is_err(), "an unreadable /out must abort the run");
+    }
 }

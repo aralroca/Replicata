@@ -1,12 +1,14 @@
-# Autonomy follows blast radius. Off-chain code merges itself when the pipeline (tests, security
-# scans and the devnet canary) is green. The on-chain escrow program holds people's money: the
-# Autopilot still writes, tests and audits the change, but a human code owner must approve it.
-# (Enforced by "Require approval from code owners" on the protected default branch.)
+# Autonomy follows blast radius. The web app, worker CLI and docs merge themselves when the
+# pipeline (tests, security scans and the devnet canary) is green. Money paths (the on-chain
+# escrow program, payments and the settlement crank) and the automation itself still go through
+# the Autopilot, but a human code owner must approve them before the auto-merge can fire.
+# (Enforced by "Code owner approval" on the protected default branch.)
 
-[On-chain escrow program][1]
+[Money paths: on-chain escrow, payments and settlement][1]
 /programs/ @aralroca
 /idl/ @aralroca
 /apps/web/src/generated/ @aralroca
+/crates/coordinator/ @aralroca
 
 [Delivery automation][1]
 /.gitlab-ci.yml @aralroca

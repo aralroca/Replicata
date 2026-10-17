@@ -144,20 +144,25 @@ web:test:
 # SAST, secret detection, dependency and container scanning come from the GitLab templates above;
 # their analyzers extend these base jobs, so moving the base job moves the whole scanner.
 
+# allow_failure: false makes a broken scanner block production instead of being ignored.
 sast:
   stage: secure
   needs: []
+  allow_failure: false
 
 secret_detection:
   stage: secure
   needs: []
+  allow_failure: false
 
 dependency_scanning:
   stage: secure
   needs: []
+  allow_failure: false
 
 container_scanning:
   stage: secure
+  allow_failure: false
   needs: ["package:image"]
   rules:
     - if: $CI_COMMIT_BRANCH || $CI_COMMIT_TAG
@@ -179,8 +184,15 @@ package:image:
   script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
     - docker pull "$IMAGE:latest" || true
-    - docker build --cache-from "$IMAGE:latest" -t "$IMAGE:$CI_COMMIT_SHORT_SHA" .
+    # Inline cache metadata makes `latest` usable as --cache-from by the next build.
+    - >
+      docker build --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg REPLICATA_VERSION="$CI_COMMIT_SHORT_SHA"
+      --cache-from "$IMAGE:latest" -t "$IMAGE:$CI_COMMIT_SHORT_SHA" .
     - docker push "$IMAGE:$CI_COMMIT_SHORT_SHA"
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
+        docker tag "$IMAGE:$CI_COMMIT_SHORT_SHA" "$IMAGE:latest" && docker push "$IMAGE:latest"
+      fi
 
 package:cli:
   extends: .rust
@@ -259,9 +271,25 @@ canary:devnet:
 deploy:production:
   stage: production
   image: node:24-bookworm
-  needs: ["canary:devnet", "rust:test", "e2e:localnet", "web:test"]
+  # Every gate must have passed: tests, all four scanners (blocking, see the secure section) and
+  # the devnet canary. Scanners a template may not create for this repo are optional needs.
+  needs:
+    - "canary:devnet"
+    - "rust:test"
+    - "e2e:localnet"
+    - "web:test"
+    - "container_scanning"
+    - "secret_detection"
+    - job: "semgrep-sast"
+      optional: true
+    - job: "gemnasium-dependency_scanning"
+      optional: true
+  # Pushes to main only: scheduled pipelines are monitoring (the hourly canary), never redeploys.
+  # The canary variables are required too, so production can never skip the release gate.
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $VERCEL_TOKEN && $RENDER_DEPLOY_HOOK
+    - if: >
+        $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH &&
+        $VERCEL_TOKEN && $RENDER_DEPLOY_HOOK && $CANARY_KEYS && $STAGING_CRANK_KEYPAIR
   resource_group: production
   environment:
     name: production
@@ -269,7 +297,7 @@ deploy:production:
   before_script:
     - apt-get update -qq && apt-get install -y -qq jq >/dev/null
   script:
-    - IMAGE_REF="$IMAGE:$CI_COMMIT_SHORT_SHA" scripts/ci/deploy-coordinator.sh
+    - IMAGE_REF="$IMAGE:$CI_COMMIT_SHORT_SHA" EXPECTED_VERSION="$CI_COMMIT_SHORT_SHA" scripts/ci/deploy-coordinator.sh
     - scripts/ci/deploy-web.sh production
 
 # ----------------------------------------------------------------- release

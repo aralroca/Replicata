@@ -44,10 +44,13 @@ setup() {
 
 publish() {
   # Small amounts: the reward and the access fee circulate between the canary's own keys.
+  local output
+
   jq '.reward = 300000 | .bond = 100000 | .access_price = 10000' "$EXAMPLE/publish.json" >"$WORK/publish.json"
-  ID=$("$WORK/replicata" publish --coordinator "$API" --keypair "$WORK/author.json" "$WORK/publish.json" |
-    sed -n 's/^published experiment \([1-9A-HJ-NP-Za-km-z]*\).*/\1/p')
-  [[ -n $ID ]] || fail "publish did not return an experiment id"
+  # `|| true`: under `set -e` a failing CLI would abort before `fail` writes the report.
+  output=$("$WORK/replicata" publish --coordinator "$API" --keypair "$WORK/author.json" "$WORK/publish.json" 2>&1 || true)
+  ID=$(sed -n 's/^published experiment \([1-9A-HJ-NP-Za-km-z]*\).*/\1/p' <<<"$output")
+  [[ -n $ID ]] || fail "publish did not return an experiment id: $output"
   log "published $ID"
 }
 
@@ -67,12 +70,14 @@ replicate() {
 }
 
 buy() {
-  local code
+  local code output
 
-  code=$(curl -s -o /dev/null -w '%{http_code}' "$API/v1/experiments/$ID/result")
+  code=$(curl -s -o /dev/null -w '%{http_code}' "$API/v1/experiments/$ID/result" || true)
   [[ $code == 402 ]] || fail "unpaid result returned HTTP $code instead of 402"
-  HASH=$("$WORK/replicata" buy "$ID" --coordinator "$API" --keypair "$WORK/consumer.json" -o "$WORK/result.tar.gz" |
-    sed -n 's/^verified result \([0-9a-f]*\).*/\1/p')
+  output=$("$WORK/replicata" buy "$ID" --coordinator "$API" --keypair "$WORK/consumer.json" -o "$WORK/result.tar.gz" 2>&1 ||
+    true)
+  HASH=$(sed -n 's/^verified result \([0-9a-f]*\).*/\1/p' <<<"$output")
+  [[ -n $HASH ]] || fail "x402 purchase failed: $output"
   [[ $HASH == "$(cat "$EXAMPLE/expected_hash")" ]] || fail "sealed hash $HASH != expected $(cat "$EXAMPLE/expected_hash")"
 }
 

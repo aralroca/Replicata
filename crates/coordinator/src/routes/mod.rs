@@ -68,6 +68,7 @@ pub fn router(state: AppState) -> Router {
     let max_bundle = state.cfg.max_bundle_bytes;
     let free = Router::new()
         .route("/health", get(public::health))
+        .route("/version", get(public::version))
         .route("/openapi.json", get(crate::openapi::serve))
         .route("/v1/config", get(public::config))
         .route("/v1/specs", post(public::post_spec))
