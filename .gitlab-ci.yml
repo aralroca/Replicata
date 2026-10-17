@@ -130,9 +130,20 @@ web:test:
     expire_in: 1 week
 
 # ------------------------------------------------------------------ secure
-# SAST, secret detection, dependency and container scanning come from the GitLab templates above.
+# SAST, secret detection, dependency and container scanning come from the GitLab templates above;
+# their analyzers extend these base jobs, so moving the base job moves the whole scanner.
+
+sast:
+  stage: secure
+
+secret_detection:
+  stage: secure
+
+dependency_scanning:
+  stage: secure
 
 container_scanning:
+  stage: secure
   needs: ["package:image"]
   rules:
     - if: $CI_COMMIT_BRANCH || $CI_COMMIT_TAG
