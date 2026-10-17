@@ -5,7 +5,7 @@
 #
 #   scripts/ci/devnet-canary.sh <replicata-cli.tar.gz>
 #
-# Env: CANARY_KEYS (file: {"author":[..],"worker1":[..],"worker2":[..],"worker3":[..],"consumer":[..]}),
+# Env: CANARY_KEYS ({"author","worker1","worker2","worker3","consumer"} keypairs: a file, or base64),
 #      CANARY_COORDINATOR (default http://coordinator:8787), CANARY_EXPERIMENT (default lorenz-int).
 set -euo pipefail
 
@@ -32,11 +32,22 @@ fail() {
   exit 1
 }
 
+# CANARY_KEYS is either a file variable with the JSON or a masked variable holding it as one line
+# of base64 (GitLab cannot mask values with whitespace).
+canary_keys() {
+  if [[ -f $CANARY_KEYS ]]; then
+    cat "$CANARY_KEYS"
+  else
+    base64 -d <<<"$CANARY_KEYS"
+  fi
+}
+
 setup() {
   mkdir -p "$WORK"
   tar -xzf "$1" -C "$WORK"
+  canary_keys >"$WORK/keys.json"
   for key in author worker1 worker2 worker3 consumer; do
-    jq -c ".$key" "$CANARY_KEYS" >"$WORK/$key.json"
+    jq -c ".$key" "$WORK/keys.json" >"$WORK/$key.json"
   done
   for _ in $(seq 1 60); do curl -sf "$API/health" >/dev/null && return; sleep 2; done
   fail "coordinator $API never became healthy"
