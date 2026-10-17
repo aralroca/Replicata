@@ -40,8 +40,12 @@ default:
 # ---------------------------------------------------------------- templates
 
 .rust:
-  image: rust:1-bookworm
-  tags: [saas-linux-medium-amd64]
+  # amd64 explicitly: Agave (Solana) ships no Linux arm64 build, and the project's own runner is
+  # an Apple Silicon Mac running x86_64 containers through Rosetta.
+  image:
+    name: rust:1-bookworm
+    docker:
+      platform: linux/amd64
   cache:
     key: rust-$CI_JOB_NAME_SLUG
     paths: [.cargo/registry, .cargo/git, .cargo/bin, target/]
@@ -186,7 +190,8 @@ package:image:
     - docker pull "$IMAGE:latest" || true
     # Inline cache metadata makes `latest` usable as --cache-from by the next build.
     - >
-      docker build --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg REPLICATA_VERSION="$CI_COMMIT_SHORT_SHA"
+      docker build --platform linux/amd64 --build-arg BUILDKIT_INLINE_CACHE=1
+      --build-arg REPLICATA_VERSION="$CI_COMMIT_SHORT_SHA"
       --cache-from "$IMAGE:latest" -t "$IMAGE:$CI_COMMIT_SHORT_SHA" .
     - docker push "$IMAGE:$CI_COMMIT_SHORT_SHA"
     - |
@@ -228,7 +233,10 @@ deploy:staging:
 # The coordinator image built above runs here as a service (with its own Postgres) against Solana
 # devnet: the exact artifact that would ship must replicate a real experiment end to end.
 canary:devnet:
-  image: rust:1-bookworm
+  image:
+    name: rust:1-bookworm
+    docker:
+      platform: linux/amd64
   stage: canary
   needs: ["package:cli", "package:image"]
   rules:
@@ -241,6 +249,8 @@ canary:devnet:
       alias: postgres
     - name: $IMAGE:$CI_COMMIT_SHORT_SHA
       alias: coordinator
+      docker:
+        platform: linux/amd64
       variables:
         CLUSTER: devnet
         RPC_URL: https://api.devnet.solana.com
