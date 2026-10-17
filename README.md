@@ -21,7 +21,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs)](apps/web)
 [![Encode × Solana Hackathon 2026](https://img.shields.io/badge/Encode%20×%20Solana-Hackathon%202026-ff6b35)](https://www.encodeclub.com/programmes/solana-hackathon-2026)
 
-[**Live demo**](https://replicata.vercel.app) · [**▶ Demo video**](https://youtu.be/4vxmJXJwinE) · [Architecture](docs/ARCHITECTURE.md) · [Agents API](docs/API.md) · [Demo script](docs/DEMO-SCRIPT.md) · [Contributing](CONTRIBUTING.md)
+[**Live demo**](https://replicata.vercel.app) · [**▶ Demo video**](https://youtu.be/4vxmJXJwinE) · [Architecture](docs/ARCHITECTURE.md) · [**GitLab Autopilot**](docs/GITLAB.md) · [Agents API](docs/API.md) · [Demo script](docs/DEMO-SCRIPT.md) · [Contributing](CONTRIBUTING.md)
 
 <a href="https://youtu.be/4vxmJXJwinE"><img alt="Watch the 2-minute Replicata demo on YouTube" src="docs/assets/demo-video.png" width="880"></a>
 
