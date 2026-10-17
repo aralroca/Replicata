@@ -1,5 +1,6 @@
 // The handful of Solana JSON-RPC methods the browser needs against the mock:
-// blockhash (publish + x402), the USDC mint account (x402 reads decimals/program) and sends.
+// blockhash (publish + x402), the USDC mint account (x402 reads decimals/program), sends and
+// confirmations (every sent transaction is reported as confirmed).
 import { MINT } from "./fixtures.mjs";
 
 const TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
@@ -30,7 +31,10 @@ const context = { apiVersion: "2.3.0", slot: 1 };
 const METHODS = {
   getLatestBlockhash: () => ({ context, value: { blockhash: BLOCKHASH, lastValidBlockHeight: 1_000 } }),
   getAccountInfo: ([address]) => ({ context, value: address === MINT ? MINT_ACCOUNT : null }),
-  getSignatureStatuses: ([signatures]) => ({ context, value: signatures.map(() => null) }),
+  getSignatureStatuses: ([signatures]) => ({
+    context,
+    value: signatures.map(() => ({ slot: 1, confirmations: null, err: null, confirmationStatus: "confirmed" })),
+  }),
   sendTransaction: () => "5".repeat(88),
 };
 

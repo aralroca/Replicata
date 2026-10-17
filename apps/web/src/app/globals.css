@@ -75,7 +75,8 @@
   }
 
   .btn-accent {
-    @apply bg-accent text-white hover:brightness-110;
+    /* Hover darkens: lightening the blue would drop white text below AA contrast. */
+    @apply bg-accent text-white hover:bg-accent-strong;
   }
 
   .btn-ghost {

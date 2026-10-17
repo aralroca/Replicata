@@ -234,6 +234,36 @@ async fn experiments_list_filters_and_detail() {
     assert_eq!(get(&f.app, "/v1/experiments/not-a-key").await.0, StatusCode::BAD_REQUEST);
 }
 
+/// JSON-RPC `getAccountInfo` answer for a Replicata account.
+fn account_info(experiment: &Experiment) -> Value {
+    let data = replicata_client::encode(experiment);
+    let base64 = base64::engine::general_purpose::STANDARD.encode(&data);
+    let value = json!({ "data": [base64, "base64"], "executable": false, "lamports": 1,
+        "owner": replicata_client::PROGRAM_ID.to_string(), "rentEpoch": 0, "space": data.len() });
+
+    json!({ "jsonrpc": "2.0", "id": 1, "result": { "context": { "slot": 9 }, "value": value } })
+}
+
+#[tokio::test]
+async fn experiment_detail_renders_one_consistent_moment() {
+    let mut f = fixture("http://127.0.0.1:9").await;
+    let rpc = MockServer::start().await;
+    let indexed = f.state.snapshot.read().await.experiments[&f.open].clone();
+    // The chain is already past the index (e.g. just finalized) while the claims are not.
+    let newer = Experiment { status: ExperimentStatus::Replicated, escrowed: 0, ..indexed };
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(account_info(&newer)))
+        .mount(&rpc)
+        .await;
+    f.state.rpc = Arc::new(RpcClient::new(rpc.uri()));
+    let app = routes::router(f.state.clone());
+
+    let (_, open) = get(&app, &format!("/v1/experiments/{}", f.open)).await;
+    assert_eq!((open["status"].as_str(), open["claims"][0]["state"].as_str()), (Some("open"), Some("committed")));
+    let (status, unindexed) = get(&app, &format!("/v1/experiments/{}", Pubkey::new_unique())).await;
+    assert_eq!((status, unindexed["status"].as_str()), (StatusCode::OK, Some("replicated")), "not indexed yet: chain");
+}
+
 #[tokio::test]
 async fn workers_and_authors() {
     let f = fixture("http://127.0.0.1:9").await;

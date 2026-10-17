@@ -3,11 +3,16 @@
 //! The chain is the source of truth, so a restart simply re-reads it (idempotent rebuild).
 
 use std::collections::{BTreeMap, HashMap};
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use base64::Engine;
 use replicata_client::{self as client, Claim, Experiment, Pubkey, WorkerProfile};
+use serde::Deserialize;
+use serde_json::json;
 use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_client::rpc_request::RpcRequest;
 use tokio::sync::{Notify, RwLock};
 
 #[derive(Default, Clone)]
@@ -61,15 +66,58 @@ fn token_amount(data: &[u8]) -> Option<u64> {
     data.get(64..72).map(|b| u64::from_le_bytes(b.try_into().unwrap()))
 }
 
+/// `{ context: { slot }, value }`, as returned by account reads with a context.
+#[derive(Deserialize)]
+struct Slotted<T> {
+    context: SlotContext,
+    value: T,
+}
+
+#[derive(Deserialize)]
+struct SlotContext {
+    slot: u64,
+}
+
+#[derive(Deserialize)]
+struct Keyed {
+    pubkey: String,
+    account: Encoded,
+}
+
+/// An account with `encoding: "base64"`: `data` is `[payload, "base64"]`.
+#[derive(Deserialize)]
+struct Encoded {
+    data: (String, String),
+}
+
+impl Encoded {
+    fn bytes(&self) -> anyhow::Result<Vec<u8>> {
+        Ok(base64::engine::general_purpose::STANDARD.decode(&self.data.0)?)
+    }
+}
+
+fn keyed_accounts(keyed: &[Keyed]) -> anyhow::Result<Vec<(Pubkey, Vec<u8>)>> {
+    keyed.iter().map(|k| Ok((Pubkey::from_str(&k.pubkey)?, k.account.bytes()?))).collect()
+}
+
+/// Reads the program's accounts, then the vault balances at the same slot or later. Two
+/// independent reads could otherwise pair a settled experiment (`escrowed = 0`) with its vault's
+/// pre-payout balance, briefly showing the payout as "royalties pending".
 pub async fn fetch(rpc: &RpcClient) -> anyhow::Result<Snapshot> {
-    let accounts = rpc.get_program_accounts(&client::PROGRAM_ID).await?;
-    let mut snapshot = Snapshot::from_accounts(accounts.into_iter().map(|(k, a)| (k, a.data)).collect());
+    let commitment = rpc.commitment().commitment;
+    let params = json!({ "encoding": "base64", "commitment": commitment, "withContext": true });
+    let program: Slotted<Vec<Keyed>> =
+        rpc.send(RpcRequest::GetProgramAccounts, json!([client::PROGRAM_ID.to_string(), params])).await?;
+    let mut snapshot = Snapshot::from_accounts(keyed_accounts(&program.value)?);
     let vaults: Vec<Pubkey> = snapshot.experiments.values().map(|e| e.vault).collect();
+    let params = json!({ "encoding": "base64", "commitment": commitment, "minContextSlot": program.context.slot });
 
     for chunk in vaults.chunks(100) {
-        let accounts = rpc.get_multiple_accounts(chunk).await?;
-        for (vault, account) in chunk.iter().zip(accounts) {
-            if let Some(amount) = account.and_then(|a| token_amount(&a.data)) {
+        let keys: Vec<String> = chunk.iter().map(ToString::to_string).collect();
+        let read: Slotted<Vec<Option<Encoded>>> =
+            rpc.send(RpcRequest::GetMultipleAccounts, json!([keys, params])).await?;
+        for (vault, account) in chunk.iter().zip(read.value) {
+            if let Some(amount) = account.and_then(|a| a.bytes().ok()).and_then(|data| token_amount(&data)) {
                 snapshot.vault_balances.insert(*vault, amount);
             }
         }
@@ -102,6 +150,22 @@ mod tests {
         data[64..72].copy_from_slice(&42u64.to_le_bytes());
         assert_eq!(token_amount(&data), Some(42));
         assert_eq!(token_amount(&[0; 10]), None);
+    }
+
+    #[test]
+    fn parses_slotted_account_reads() {
+        let key = Pubkey::new_unique();
+        let program: Slotted<Vec<Keyed>> = serde_json::from_value(json!({
+            "context": { "slot": 77 },
+            "value": [{ "pubkey": key.to_string(), "account": { "data": ["AQID", "base64"] } }],
+        }))
+        .unwrap();
+        let vaults: Slotted<Vec<Option<Encoded>>> =
+            serde_json::from_value(json!({ "context": { "slot": 78 }, "value": [null] })).unwrap();
+
+        assert_eq!(program.context.slot, 77);
+        assert_eq!(keyed_accounts(&program.value).unwrap(), vec![(key, vec![1, 2, 3])]);
+        assert!(vaults.value[0].is_none());
     }
 
     #[test]

@@ -112,8 +112,14 @@ pub async fn list_experiments(
 
 pub async fn get_experiment(State(state): State<AppState>, Path(id): Path<String>) -> ApiResult<Json<ExperimentView>> {
     let id = parse_pubkey(&id)?;
-    let experiment = state.experiment(&id).await.ok_or_else(|| ApiError::not_found("experiment"))?;
     let snapshot = state.snapshot.read().await.clone();
+    // Status, claims and vault balance must come from the same moment: a fresh account rendered
+    // with older claims showed a just-settled experiment with unsettled claims and its payout as
+    // "royalties pending". Only an experiment the indexer has not seen yet is read from the chain.
+    let experiment = match snapshot.experiments.get(&id) {
+        Some(indexed) => indexed.clone(),
+        None => state.experiment(&id).await.ok_or_else(|| ApiError::not_found("experiment"))?,
+    };
     let views = render(&state, &snapshot, &[(id, experiment)]).await?;
 
     views.into_iter().next().map(Json).ok_or_else(|| ApiError::not_found("experiment"))

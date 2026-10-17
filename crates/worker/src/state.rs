@@ -56,8 +56,12 @@ impl State {
         Ok(serde_json::from_str(&std::fs::read_to_string(path)?)?)
     }
 
-    /// Atomic write (temp file + rename) so a crash never leaves a torn file.
+    /// Atomic write (temp file + rename) so a crash never leaves a torn file. Creates the home
+    /// directory if needed: with `--keypair` nothing else has created it yet.
     pub fn save(&self, path: &Path) -> anyhow::Result<()> {
+        if let Some(dir) = path.parent() {
+            std::fs::create_dir_all(dir)?;
+        }
         let tmp = path.with_extension("json.tmp");
         std::fs::write(&tmp, serde_json::to_vec_pretty(self)?)?;
         std::fs::rename(tmp, path)?;
@@ -89,6 +93,17 @@ mod tests {
         let loaded = State::load(&path).unwrap();
         assert_eq!(loaded.jobs["exp"].stage, Stage::Committed);
         assert_eq!(loaded.jobs["exp"].salt.as_deref(), Some("aa"));
+    }
+
+    #[test]
+    fn save_creates_a_missing_home() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("not-created-yet/state.json");
+        let mut state = State::default();
+
+        state.jobs.insert("exp".into(), Job::new(Stage::Claimed));
+        state.save(&path).unwrap();
+        assert_eq!(State::load(&path).unwrap().jobs["exp"].stage, Stage::Claimed);
     }
 
     #[test]

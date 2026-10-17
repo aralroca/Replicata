@@ -3,7 +3,7 @@
 //! Used by the coordinator, the worker and the LiteSVM tests.
 
 use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
-use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
+use anchor_lang::{AccountDeserialize, AccountSerialize, InstructionData, ToAccountMetas};
 use spl_associated_token_account_interface::address::get_associated_token_address_with_program_id;
 
 pub use anchor_lang::prelude::Pubkey;
@@ -192,6 +192,13 @@ pub fn replicators(exp: &Experiment) -> &[Pubkey] {
 /// Decodes any Replicata account (checks the Anchor discriminator).
 pub fn decode<T: AccountDeserialize>(data: &[u8]) -> Option<T> {
     T::try_deserialize(&mut &data[..]).ok()
+}
+
+/// Account bytes as stored on-chain (discriminator + data): the inverse of [`decode`].
+pub fn encode<T: AccountSerialize>(account: &T) -> Vec<u8> {
+    let mut data = Vec::new();
+    account.try_serialize(&mut data).expect("serialising into a Vec cannot fail");
+    data
 }
 
 /// Whether instruction data is a `create_experiment` call (Anchor discriminator prefix).

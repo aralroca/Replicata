@@ -16,6 +16,7 @@ const STAGE_LABEL = {
   idle: "Publish & escrow reward",
   uploading: "Uploading spec…",
   signing: "Approve in your wallet…",
+  confirming: "Confirming on Solana…",
 };
 
 const SUMMARY: { label: string; value: (spec: JobSpec, e: Economics) => string }[] = [

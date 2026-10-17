@@ -69,13 +69,21 @@
     if (rejected) throw Object.assign(new Error("User rejected the request."), { code: 4001 });
   }
 
-  async function send(signed) {
-    const params = [btoa(String.fromCharCode(...signed)), { encoding: "base64" }];
-    const body = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "sendTransaction", params });
+  const JSON_HEADERS = { "Content-Type": "application/json" };
 
+  // Like a real wallet: simulate at the dapp's blockhash commitment and surface RPC failures.
+  async function rpcSend(signed) {
+    const options = { encoding: "base64", preflightCommitment: "confirmed" };
+    const params = [btoa(String.fromCharCode(...signed)), options];
+    const body = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "sendTransaction", params });
+    const { error } = await (await fetch(config.sendRpc, { method: "POST", headers: JSON_HEADERS, body })).json();
+
+    if (error) throw new Error(error.message);
+  }
+
+  async function send(signed) {
     state.sent.push(Array.from(signed));
-    if (config.sendRpc)
-      await fetch(config.sendRpc, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+    if (config.sendRpc) await rpcSend(signed);
   }
 
   async function signAndSend({ transaction }) {
