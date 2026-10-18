@@ -10,8 +10,22 @@ SOLANA_BIN="$HOME/.local/share/solana/install/active_release/bin"
 echo "$SOLANA_BIN" >>"${GITHUB_PATH:-/dev/null}"
 export PATH="$SOLANA_BIN:$PATH"
 
-if ! command -v anchor >/dev/null || ! anchor --version | grep -q "${ANCHOR_VERSION:-1.2.1}"; then
-  cargo install anchor-cli --version "${ANCHOR_VERSION:-1.2.1}" --locked
+ANCHOR_VERSION=${ANCHOR_VERSION:-1.2.1}
+ANCHOR_BIN="${CARGO_HOME:-$HOME/.cargo}/bin/anchor"
+# Prefer the release binary (Linux x86_64): compiling anchor-cli takes most of a CI job.
+install_anchor() {
+  local url="https://github.com/solana-foundation/anchor/releases/download/v$ANCHOR_VERSION/anchor-$ANCHOR_VERSION-x86_64-unknown-linux-gnu"
+
+  mkdir -p "$(dirname "$ANCHOR_BIN")"
+  if [[ "$(uname -s)-$(uname -m)" == Linux-x86_64 ]] && curl -sSfL -o "$ANCHOR_BIN" "$url"; then
+    chmod +x "$ANCHOR_BIN"
+  else
+    cargo install anchor-cli --version "$ANCHOR_VERSION" --locked
+  fi
+}
+
+if ! command -v anchor >/dev/null || ! anchor --version | grep -q "$ANCHOR_VERSION"; then
+  install_anchor
 fi
 solana-keygen new --no-bip39-passphrase --silent --force -o "$HOME/.config/solana/id.json" >/dev/null
 solana --version
