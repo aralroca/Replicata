@@ -5,7 +5,7 @@
 # still flows through the same automation, but CODEOWNERS requires a human approval before the
 # auto-merge can fire.
 name: "Replicata Autopilot"
-description: "Turns a Replicata issue into a merged, canaried, deployed change: plans it, implements it, pushes with auto-merge and audits the escrow invariants."
+description: "Turns a Replicata issue into a merged, canaried, deployed change: plans it, implements it, opens the merge request (auto-merged when hands_off) and audits the escrow invariants."
 public: true
 definition:
   version: v1
