@@ -117,17 +117,14 @@ definition:
              `pnpm -C apps/web lint` and `pnpm -C apps/web test`. Rust is verified by the pipeline.
           4. Commit with a Conventional Commit message that ends with `Closes #<issue-iid>`.
           5. Push the branch with `git push origin HEAD` (push options are not available to flows).
-          6. Open the merge request with this flow's own API token (GITLAB_TOKEN, ai_workflows scope),
-             then arm auto-merge so it merges itself only when the whole pipeline (tests, security
-             scans, devnet canary) passes. If the pipeline has not started yet, retry the second call
-             every 15 seconds for up to 2 minutes:
-             API="$CI_API_V4_URL/projects/$CI_PROJECT_ID"; AUTH="Authorization: Bearer $GITLAB_TOKEN"
-             IID=$(curl -sf -X POST -H "$AUTH" "$API/merge_requests" \
+          6. Open the merge request with this flow's own API token (GITLAB_TOKEN, ai_workflows scope).
+             The label matters: for autopilot::hands_off the merge request pipeline arms auto-merge
+             itself (flow tokens cannot merge), so it merges only when every job passes:
+             curl -sf -X POST -H "Authorization: Bearer $GITLAB_TOKEN" \
+               "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests" \
                --data-urlencode "source_branch=<branch>" --data-urlencode "target_branch=$CI_DEFAULT_BRANCH" \
                --data-urlencode "title=<title>" --data-urlencode "labels=autopilot::<tier>" \
-               --data-urlencode "remove_source_branch=true" | jq -r .iid)
-             curl -sf -X PUT -H "$AUTH" "$API/merge_requests/$IID/merge" \
-               --data "merge_when_pipeline_succeeds=true&should_remove_source_branch=true"
+               --data-urlencode "remove_source_branch=true" | jq -r .iid
              Post an issue note linking the merge request.
 
           Never touch secrets, CI variables or the deployment scripts' credentials. If you cannot
