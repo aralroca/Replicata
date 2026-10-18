@@ -20,7 +20,7 @@ fn files() -> impl Strategy<Value = BTreeMap<String, Vec<u8>>> {
 
 fn spec() -> impl Strategy<Value = JobSpec> {
     (
-        "[ -~]{1,40}",
+        "[!-~][ -~]{0,39}", // validate() rejects blank titles
         "\\PC{0,60}",
         proptest::collection::btree_map("[A-Z_]{1,10}", "[ -~]{0,10}", 0..4),
         any::<u64>(),
