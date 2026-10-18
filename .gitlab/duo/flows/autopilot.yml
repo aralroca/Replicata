@@ -116,12 +116,19 @@ definition:
           3. Run the fast checks that apply: for apps/web run `pnpm install --frozen-lockfile` then
              `pnpm -C apps/web lint` and `pnpm -C apps/web test`. Rust is verified by the pipeline.
           4. Commit with a Conventional Commit message that ends with `Closes #<issue-iid>`.
-          5. Push with GitLab push options so the merge request is created and merges itself only
-             when the whole pipeline (tests, security scans, devnet canary) passes:
-             git push -o merge_request.create -o merge_request.target=$CI_DEFAULT_BRANCH \
-               -o merge_request.merge_when_pipeline_succeeds -o merge_request.remove_source_branch \
-               -o merge_request.title="<title>" -o merge_request.label="autopilot::<tier>" origin HEAD
-          6. Find the merge request IID (git push prints its URL) and post an issue note linking it.
+          5. Push the branch with `git push origin HEAD` (push options are not available to flows).
+          6. Open the merge request with this flow's own API token (GITLAB_TOKEN, ai_workflows scope),
+             then arm auto-merge so it merges itself only when the whole pipeline (tests, security
+             scans, devnet canary) passes. If the pipeline has not started yet, retry the second call
+             every 15 seconds for up to 2 minutes:
+             API="$CI_API_V4_URL/projects/$CI_PROJECT_ID"; AUTH="Authorization: Bearer $GITLAB_TOKEN"
+             IID=$(curl -sf -X POST -H "$AUTH" "$API/merge_requests" \
+               --data-urlencode "source_branch=<branch>" --data-urlencode "target_branch=$CI_DEFAULT_BRANCH" \
+               --data-urlencode "title=<title>" --data-urlencode "labels=autopilot::<tier>" \
+               --data-urlencode "remove_source_branch=true" | jq -r .iid)
+             curl -sf -X PUT -H "$AUTH" "$API/merge_requests/$IID/merge" \
+               --data "merge_when_pipeline_succeeds=true&should_remove_source_branch=true"
+             Post an issue note linking the merge request.
 
           Never touch secrets, CI variables or the deployment scripts' credentials. If you cannot
           complete the change safely, say so in an issue note instead of pushing.
