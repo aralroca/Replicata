@@ -197,6 +197,9 @@ async fn config_and_openapi() {
     let (status, openapi) = get(&f.app, "/openapi.json").await;
     assert_eq!(status, StatusCode::OK);
     assert!(openapi["paths"]["/v1/experiments/{id}/result"].is_object());
+    let (status, _, version) = call(&f.app, Request::get("/version").body(Body::empty()).unwrap()).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(!version.is_empty(), "the serving build identifies itself");
 }
 
 #[tokio::test]

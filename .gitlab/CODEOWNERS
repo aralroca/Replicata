@@ -1,0 +1,16 @@
+# Autonomy follows blast radius. The web app, worker CLI and docs merge themselves when the
+# pipeline (tests, security scans and the devnet canary) is green. Money paths (the on-chain
+# escrow program, payments and the settlement crank) and the automation itself still go through
+# the Autopilot, but a human code owner must approve them before the auto-merge can fire.
+# (Enforced by "Code owner approval" on the protected default branch.)
+
+[Money paths: on-chain escrow, payments and settlement][1]
+/programs/ @aralroca
+/idl/ @aralroca
+/apps/web/src/generated/ @aralroca
+/crates/coordinator/ @aralroca
+
+[Delivery automation][1]
+/.gitlab-ci.yml @aralroca
+/.gitlab/ @aralroca
+/scripts/ci/ @aralroca

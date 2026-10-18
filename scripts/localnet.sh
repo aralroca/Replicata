@@ -83,7 +83,12 @@ start_facilitator() {
   wait_for "facilitator" curl -sf "http://127.0.0.1:$FACILITATOR_PORT/supported"
 }
 
+# LOCALNET_DATABASE_URL: use an existing Postgres (e.g. a CI service) instead of starting one.
 start_postgres() {
+  if [[ -n ${LOCALNET_DATABASE_URL:-} ]]; then
+    log "using external postgres"
+    return
+  fi
   log "starting postgres (docker)"
   docker run -d --rm --name replicata-postgres -p "${PG_PORT:-54329}":5432 --tmpfs /var/lib/postgresql/data \
     -e POSTGRES_USER=replicata -e POSTGRES_PASSWORD=replicata -e POSTGRES_DB=replicata postgres:17-alpine >/dev/null
@@ -96,7 +101,7 @@ export CLUSTER=localnet
 export RPC_URL=$RPC
 export USDC_MINT=$(mint_address)
 export FACILITATOR_URL=http://127.0.0.1:$FACILITATOR_PORT
-export DATABASE_URL=postgres://replicata:replicata@127.0.0.1:${PG_PORT:-54329}/replicata
+export DATABASE_URL=${LOCALNET_DATABASE_URL:-postgres://replicata:replicata@127.0.0.1:${PG_PORT:-54329}/replicata}
 export CRANK_KEYPAIR=$(keypair crank)
 export KEYS_DIR=$KEYS
 EOF
@@ -110,7 +115,7 @@ stop() {
       rm -f "$STATE/$svc.pid"
     fi
   done
-  docker rm -f replicata-postgres >/dev/null 2>&1 || true
+  [[ -n ${LOCALNET_DATABASE_URL:-} ]] || docker rm -f replicata-postgres >/dev/null 2>&1 || true
   log "stopped"
 }
 

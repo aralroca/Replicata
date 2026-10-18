@@ -1,0 +1,387 @@
+# Replicata on GitLab: the whole post-code lifecycle in one pipeline.
+#
+#   verify  → package → secure → staging → canary (real replication on devnet) → production
+#   release (tags) · monitor (scheduled canary) · govern (license + policy audit)
+#
+# GitLab Duo agents (see .gitlab/duo/) open the merge requests, read this pipeline, fix what
+# fails and report back on the issue; this file is the deterministic half of that loop.
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+stages: [verify, package, secure, staging, canary, production, release, monitor, govern]
+
+include:
+  - template: Jobs/SAST.gitlab-ci.yml
+  - template: Jobs/Secret-Detection.gitlab-ci.yml
+  - template: Jobs/Dependency-Scanning.gitlab-ci.yml
+  - template: Jobs/Container-Scanning.gitlab-ci.yml
+
+variables:
+  AGAVE_VERSION: v4.1.2
+  ANCHOR_VERSION: 1.2.1
+  CARGO_HOME: $CI_PROJECT_DIR/.cargo
+  CARGO_TERM_COLOR: always
+  # Debug info for the Solana dependency tree fills the runner disk.
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
+  CARGO_INCREMENTAL: "0"
+  IMAGE: $CI_REGISTRY_IMAGE/coordinator
+  CS_IMAGE: $CI_REGISTRY_IMAGE/coordinator:$CI_COMMIT_SHORT_SHA
+
+default:
+  interruptible: true
+
+# ---------------------------------------------------------------- templates
+
+.rust:
+  # amd64 explicitly (Agave ships no Linux arm64 build) on 4-vCPU runners: the Solana dependency
+  # tree is too heavy for the small ones.
+  image:
+    name: rust:1-bookworm
+    docker:
+      platform: linux/amd64
+  tags: [saas-linux-medium-amd64]
+  cache:
+    key: rust-$CI_JOB_NAME_SLUG
+    paths: [.cargo/registry, .cargo/git, .cargo/bin, target/]
+  before_script:
+    - source scripts/ci-install-solana.sh
+
+# The worker sandbox bind-mounts its job directories; keep them under /builds, which the
+# Docker-in-Docker service shares with the job.
+.docker:
+  services:
+    - name: docker:27-dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    TMPDIR: $CI_PROJECT_DIR/.tmp
+    REPLICATA_HOME: $CI_PROJECT_DIR/.tmp/replicata
+  before_script:
+    - mkdir -p "$TMPDIR" "$REPLICATA_HOME"
+    - source scripts/ci-install-solana.sh
+
+.node:
+  image: mcr.microsoft.com/playwright:v1.64.0-noble
+  cache:
+    key: { files: [pnpm-lock.yaml] }
+    paths: [.pnpm-store]
+  before_script:
+    - corepack enable
+    - pnpm config set store-dir .pnpm-store
+    - pnpm install --frozen-lockfile
+
+# ------------------------------------------------------------------ verify
+
+rust:lint:
+  extends: .rust
+  stage: verify
+  script:
+    - rustup component add rustfmt clippy
+    - anchor build
+    - diff -u idl/replicata.json target/idl/replicata.json
+    - cargo fmt --all -- --check
+    - cargo clippy --workspace --all-targets -- -D warnings
+
+rust:test:
+  extends: [.rust, .docker]
+  stage: verify
+  services:
+    - name: docker:27-dind
+      alias: docker
+    - name: postgres:17-alpine
+      alias: postgres
+  variables:
+    POSTGRES_USER: replicata
+    POSTGRES_PASSWORD: replicata
+    POSTGRES_DB: replicata
+    TEST_DATABASE_URL: postgres://replicata:replicata@postgres:5432/replicata
+  script:
+    - anchor build
+    - cargo test -p replicata-core -p replicata-client -p replicata -p replicata-program-tests 2>&1 | tee test.log
+    - cargo test -p replicata-coordinator 2>&1 | tee -a test.log
+    - cargo test -p replicata-worker --lib --test sandbox --test examples 2>&1 | tee -a test.log
+  artifacts:
+    when: always
+    paths: [test.log]
+    expire_in: 2 weeks
+
+e2e:localnet:
+  extends: [.rust, .docker]
+  stage: verify
+  needs: []
+  services:
+    - name: docker:27-dind
+      alias: docker
+    - name: postgres:17-alpine
+      alias: postgres
+  variables:
+    POSTGRES_USER: replicata
+    POSTGRES_PASSWORD: replicata
+    POSTGRES_DB: replicata
+    LOCALNET_DATABASE_URL: postgres://replicata:replicata@postgres:5432/replicata
+  script:
+    - anchor build
+    - scripts/e2e-local.sh 2
+
+web:test:
+  extends: .node
+  stage: verify
+  script:
+    - pnpm gen:check
+    - pnpm -C apps/web lint
+    - pnpm -C apps/web test
+    - pnpm -C apps/web build
+    - pnpm -C apps/web test:e2e
+  artifacts:
+    when: on_failure
+    paths: [apps/web/test-results/]
+    expire_in: 1 week
+
+# Duo flow tokens can open merge requests but not merge them, so the pipeline arms auto-merge for
+# hands_off Autopilot changes, pinned to the commit under test: it still merges only if every job
+# passes, and the escrow auditor can cancel it. Supervised tiers are never armed.
+autopilot:auto-merge:
+  stage: verify
+  image: alpine:3.20
+  needs: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^autopilot\// && $CI_MERGE_REQUEST_LABELS =~ /(^|,)autopilot::hands_off(,|$)/ && $AUTOPILOT_MERGE_TOKEN
+  script:
+    - apk add --no-cache -q curl
+    - >-
+      curl -sf -X PUT -H "PRIVATE-TOKEN: $AUTOPILOT_MERGE_TOKEN"
+      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID/merge"
+      --data "merge_when_pipeline_succeeds=true&should_remove_source_branch=true&sha=$CI_COMMIT_SHA"
+      -o /dev/null
+
+# ------------------------------------------------------------------ secure
+# SAST, secret detection, dependency and container scanning come from the GitLab templates above;
+# their analyzers extend these base jobs, so moving the base job moves the whole scanner.
+
+# allow_failure: false makes a broken scanner block production instead of being ignored.
+sast:
+  stage: secure
+  needs: []
+  allow_failure: false
+
+secret_detection:
+  stage: secure
+  needs: []
+  allow_failure: false
+
+dependency_scanning:
+  stage: secure
+  needs: []
+  allow_failure: false
+
+container_scanning:
+  stage: secure
+  allow_failure: false
+  needs: ["package:image"]
+  rules:
+    - if: $CI_COMMIT_BRANCH || $CI_COMMIT_TAG
+
+# ----------------------------------------------------------------- package
+
+package:image:
+  stage: package
+  image: docker:27
+  services:
+    - name: docker:27-dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH || $CI_COMMIT_TAG
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - docker pull "$IMAGE:latest" || true
+    # Inline cache metadata makes `latest` usable as --cache-from by the next build.
+    - >
+      docker build --platform linux/amd64 --build-arg BUILDKIT_INLINE_CACHE=1
+      --build-arg REPLICATA_VERSION="$CI_COMMIT_SHORT_SHA"
+      --cache-from "$IMAGE:latest" -t "$IMAGE:$CI_COMMIT_SHORT_SHA" .
+    - docker push "$IMAGE:$CI_COMMIT_SHORT_SHA"
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
+        docker tag "$IMAGE:$CI_COMMIT_SHORT_SHA" "$IMAGE:latest" && docker push "$IMAGE:latest"
+      fi
+
+package:cli:
+  extends: .rust
+  stage: package
+  needs: []
+  before_script: []
+  rules:
+    - if: $CI_COMMIT_BRANCH || $CI_COMMIT_TAG
+  script:
+    - cargo build --release -p replicata-worker
+    - mkdir -p dist && tar -czf dist/replicata-linux-x86_64.tar.gz -C target/release replicata
+  artifacts:
+    paths: [dist/]
+    expire_in: 1 month
+
+# --------------------------------------------------------- staging/canary
+
+deploy:staging:
+  stage: staging
+  image: node:24-bookworm
+  needs: ["web:test", "package:image"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $VERCEL_TOKEN
+  environment:
+    name: staging
+    url: $STAGING_URL
+  script:
+    - scripts/ci/deploy-web.sh preview | tee deploy.env
+  artifacts:
+    reports:
+      dotenv: deploy.env
+
+# The coordinator image built above runs here as a service (with its own Postgres) against Solana
+# devnet: the exact artifact that would ship must replicate a real experiment end to end.
+canary:devnet:
+  image:
+    name: rust:1-bookworm
+    docker:
+      platform: linux/amd64
+  stage: canary
+  needs: ["package:cli", "package:image"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CANARY_KEYS && $STAGING_CRANK_KEYPAIR
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $CANARY_KEYS && $STAGING_CRANK_KEYPAIR
+  services:
+    - name: docker:27-dind
+      alias: docker
+    - name: postgres:17-alpine
+      alias: postgres
+    - name: $IMAGE:$CI_COMMIT_SHORT_SHA
+      alias: coordinator
+      docker:
+        platform: linux/amd64
+      variables:
+        CLUSTER: devnet
+        RPC_URL: https://api.devnet.solana.com
+        DATABASE_URL: postgres://replicata:replicata@postgres:5432/replicata
+        CRANK_KEYPAIR: $STAGING_CRANK_KEYPAIR
+        PUBLIC_URL: http://coordinator:8787
+        POLL_MS: "3000"
+  variables:
+    FF_NETWORK_PER_BUILD: "true"
+    POSTGRES_USER: replicata
+    POSTGRES_PASSWORD: replicata
+    POSTGRES_DB: replicata
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    # Set TMPDIR here, not in variables: the runner downloads the package:cli artifacts into
+    # TMPDIR before any script runs, so a job-level TMPDIR that does not exist yet fails the job.
+    - mkdir -p "$CI_PROJECT_DIR/.tmp" && export TMPDIR="$CI_PROJECT_DIR/.tmp"
+    - apt-get update -qq && apt-get install -y -qq jq >/dev/null
+  script:
+    - scripts/ci/devnet-canary.sh dist/replicata-linux-x86_64.tar.gz
+  artifacts:
+    when: always
+    paths: [canary.json]
+    reports:
+      dotenv: canary.env
+
+# -------------------------------------------------------------- production
+
+deploy:production:
+  stage: production
+  image: node:24-bookworm
+  # Every gate must have passed: tests, all four scanners (blocking, see the secure section) and
+  # the devnet canary. Scanners a template may not create for this repo are optional needs.
+  needs:
+    - "canary:devnet"
+    - "rust:test"
+    - "e2e:localnet"
+    - "web:test"
+    - "container_scanning"
+    - "secret_detection"
+    - job: "semgrep-sast"
+      optional: true
+    - job: "gemnasium-dependency_scanning"
+      optional: true
+  # Pushes to main only: scheduled pipelines are monitoring (the hourly canary), never redeploys.
+  # The canary variables are required too, so production can never skip the release gate.
+  rules:
+    - if: >
+        $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH &&
+        $VERCEL_TOKEN && $RENDER_DEPLOY_HOOK && $CANARY_KEYS && $STAGING_CRANK_KEYPAIR
+  resource_group: production
+  environment:
+    name: production
+    url: https://replicata.vercel.app
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq jq >/dev/null
+  script:
+    - IMAGE_REF="$IMAGE:$CI_COMMIT_SHORT_SHA" EXPECTED_VERSION="$CI_COMMIT_SHORT_SHA" scripts/ci/deploy-coordinator.sh
+    - scripts/ci/deploy-web.sh production
+
+# ----------------------------------------------------------------- release
+
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  needs: ["package:cli"]
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+  script:
+    - echo "Releasing $CI_COMMIT_TAG"
+  release:
+    tag_name: $CI_COMMIT_TAG
+    # Notes come from the annotated tag the Release Steward agent wrote.
+    description: $CI_COMMIT_TAG_MESSAGE
+    assets:
+      links:
+        - name: replicata-linux-x86_64.tar.gz
+          url: $CI_PROJECT_URL/-/jobs/artifacts/$CI_COMMIT_TAG/raw/dist/replicata-linux-x86_64.tar.gz?job=package:cli
+
+# ----------------------------------------------------------------- monitor
+
+monitor:health:
+  stage: monitor
+  image: curlimages/curl:8.11.1
+  needs: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  script:
+    - curl -fsS --retry 3 --retry-delay 20 --max-time 90 https://replicata-coordinator.onrender.com/health
+    - curl -fsS --max-time 60 https://replicata.vercel.app/ -o /dev/null
+
+# ------------------------------------------------------------------ govern
+
+govern:licenses:rust:
+  image: rust:1-bookworm
+  stage: govern
+  needs: []
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq jq >/dev/null
+  script:
+    - scripts/ci/license-audit.sh rust
+  artifacts:
+    paths: [licenses-rust.json]
+    expire_in: 1 month
+
+govern:licenses:js:
+  extends: .node
+  stage: govern
+  needs: []
+  script:
+    - apt-get update -qq && apt-get install -y -qq jq >/dev/null
+    - scripts/ci/license-audit.sh js
+  artifacts:
+    paths: [licenses-js.json]
+    expire_in: 1 month
