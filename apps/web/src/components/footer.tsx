@@ -3,6 +3,10 @@ import { explorerUrl } from "@/lib/explorer";
 
 const LINKS = [
   { href: "https://github.com/aralroca/Replicata", label: "GitHub" },
+  {
+    href: "https://gitlab.com/gitlab-ai-hackathon/transcend-october-2026/5767991/showcase",
+    label: "GitLab",
+  },
   { href: "https://github.com/aralroca/Replicata/blob/main/docs/API.md", label: "API" },
   { href: explorerUrl("address", REPLICATA_PROGRAM_ADDRESS), label: "Program" },
 ];
