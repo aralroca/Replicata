@@ -1,0 +1,25 @@
+# Sandbox for Replicata's Duo flows (read from the default branch only).
+# The agents edit code, run the fast web checks, push branches with git push options and talk to
+# the GitLab API with the job's GITLAB_TOKEN; the full verification is the CI pipeline.
+image: node:24-bookworm
+
+setup_script:
+  - apt-get update -qq && apt-get install -y -qq jq >/dev/null
+  - corepack enable
+  - pnpm config set store-dir .pnpm-store
+
+cache:
+  key:
+    files:
+      - pnpm-lock.yaml
+    prefix: duo-pnpm
+  paths:
+    - .pnpm-store
+
+network_policy:
+  include_recommended_allowed: true
+  allowed_domains:
+    - registry.npmjs.org
+    - replicata.vercel.app
+    - replicata-coordinator.onrender.com
+    - api.devnet.solana.com
