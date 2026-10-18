@@ -145,6 +145,23 @@ web:test:
     paths: [apps/web/test-results/]
     expire_in: 1 week
 
+# Duo flow tokens can open merge requests but not merge them, so the pipeline arms auto-merge for
+# hands_off Autopilot changes, pinned to the commit under test: it still merges only if every job
+# passes, and the escrow auditor can cancel it. Supervised tiers are never armed.
+autopilot:auto-merge:
+  stage: verify
+  image: alpine:3.20
+  needs: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^autopilot\// && $CI_MERGE_REQUEST_LABELS =~ /(^|,)autopilot::hands_off(,|$)/ && $AUTOPILOT_MERGE_TOKEN
+  script:
+    - apk add --no-cache -q curl
+    - >-
+      curl -sf -X PUT -H "PRIVATE-TOKEN: $AUTOPILOT_MERGE_TOKEN"
+      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID/merge"
+      --data "merge_when_pipeline_succeeds=true&should_remove_source_branch=true&sha=$CI_COMMIT_SHA"
+      -o /dev/null
+
 # ------------------------------------------------------------------ secure
 # SAST, secret detection, dependency and container scanning come from the GitLab templates above;
 # their analyzers extend these base jobs, so moving the base job moves the whole scanner.
